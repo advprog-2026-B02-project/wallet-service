@@ -2,12 +2,14 @@ package id.ac.ui.cs.advprog.bidmart.wallet.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Check;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "wallets")
+@Check(constraints = "available_balance >= 0 AND held_balance >= 0")
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
 public class Wallet {
 

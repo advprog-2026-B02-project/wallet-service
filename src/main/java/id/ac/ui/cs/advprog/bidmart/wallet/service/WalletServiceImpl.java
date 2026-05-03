@@ -36,9 +36,11 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     public WalletResponse topUp(UUID userId, TopUpRequest request) {
+        if (request.getAmount() <= 0) {
+            throw new IllegalArgumentException("Top-up amount must be positive");
+        }
         Wallet wallet = findOrCreateWallet(userId);
-        wallet.setAvailableBalance(wallet.getAvailableBalance() + request.getAmount());
-        wallet.setUpdatedAt(LocalDateTime.now());
+        applyBalanceChange(wallet, request.getAmount(), 0);
         walletRepository.save(wallet);
         saveTransaction(wallet, TransactionType.TOPUP, "Top-up saldo", request.getAmount(), null);
         return toWalletResponse(wallet);
@@ -54,8 +56,7 @@ public class WalletServiceImpl implements WalletService {
                     String.format("Saldo tidak mencukupi. Tersedia: %d, Dibutuhkan: %d (termasuk biaya %d)",
                             wallet.getAvailableBalance(), total, WITHDRAW_FEE));
         }
-        wallet.setAvailableBalance(wallet.getAvailableBalance() - total);
-        wallet.setUpdatedAt(LocalDateTime.now());
+        applyBalanceChange(wallet, -total, 0);
         walletRepository.save(wallet);
         WalletTransaction txn = saveTransaction(wallet, TransactionType.WITHDRAW,
                 String.format("Penarikan ke %s %s (%s)",
@@ -107,19 +108,20 @@ public class WalletServiceImpl implements WalletService {
     @Override
     @Transactional
     public HoldResponse createHold(HoldRequest request) {
+        if (request.getAmount() <= 0) {
+            throw new IllegalArgumentException("Hold amount must be positive");
+        }
         Wallet wallet = findOrCreateWallet(request.getUserId());
+        balanceHoldRepository.findByUserIdAndAuctionIdAndStatus(
+                        request.getUserId(), request.getAuctionId(), HoldStatus.ACTIVE)
+                .ifPresent(existing -> releaseHoldInternal(wallet, existing));
+
         if (wallet.getAvailableBalance() < request.getAmount()) {
             throw new IllegalStateException(
                     String.format("Saldo tidak mencukupi. Tersedia: %d, Dibutuhkan: %d",
                             wallet.getAvailableBalance(), request.getAmount()));
         }
-        balanceHoldRepository.findByUserIdAndAuctionIdAndStatus(
-                        request.getUserId(), request.getAuctionId(), HoldStatus.ACTIVE)
-                .ifPresent(existing -> releaseHoldInternal(wallet, existing));
-
-        wallet.setAvailableBalance(wallet.getAvailableBalance() - request.getAmount());
-        wallet.setHeldBalance(wallet.getHeldBalance() + request.getAmount());
-        wallet.setUpdatedAt(LocalDateTime.now());
+        applyBalanceChange(wallet, -request.getAmount(), request.getAmount());
         walletRepository.save(wallet);
 
         BalanceHold hold = BalanceHold.builder()
@@ -137,11 +139,15 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional
     public HoldResponse releaseHold(UUID holdId) {
         BalanceHold hold = balanceHoldRepository.findById(holdId)
                 .orElseThrow(() -> new IllegalArgumentException("Hold not found: " + holdId));
-        if (hold.getStatus() != HoldStatus.ACTIVE) {
-            throw new IllegalStateException("Hold is not active: " + hold.getStatus());
+        if (hold.getStatus() == HoldStatus.RELEASED) {
+            return toHoldResponse(hold);
+        }
+        if (hold.getStatus() == HoldStatus.CAPTURED) {
+            throw new IllegalStateException("Hold sudah di-capture, tidak bisa di-release: " + holdId);
         }
         Wallet wallet = walletRepository.findById(hold.getWalletId())
                 .orElseThrow(() -> new IllegalStateException("Wallet not found"));
@@ -151,16 +157,19 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional
     public HoldResponse captureHold(UUID holdId) {
         BalanceHold hold = balanceHoldRepository.findById(holdId)
                 .orElseThrow(() -> new IllegalArgumentException("Hold not found: " + holdId));
-        if (hold.getStatus() != HoldStatus.ACTIVE) {
-            throw new IllegalStateException("Hold is not active: " + hold.getStatus());
+        if (hold.getStatus() == HoldStatus.CAPTURED) {
+            return toHoldResponse(hold);
+        }
+        if (hold.getStatus() == HoldStatus.RELEASED) {
+            throw new IllegalStateException("Hold sudah di-release, tidak bisa di-capture: " + holdId);
         }
         Wallet wallet = walletRepository.findById(hold.getWalletId())
                 .orElseThrow(() -> new IllegalStateException("Wallet not found"));
-        wallet.setHeldBalance(wallet.getHeldBalance() - hold.getAmount());
-        wallet.setUpdatedAt(LocalDateTime.now());
+        applyBalanceChange(wallet, 0, -hold.getAmount());
         walletRepository.save(wallet);
         hold.setStatus(HoldStatus.CAPTURED);
         hold.setUpdatedAt(LocalDateTime.now());
@@ -191,8 +200,7 @@ public class WalletServiceImpl implements WalletService {
 
             if (winnerIds.contains(hold.getUserId())) {
                 long captureAmount = winnerAmounts.getOrDefault(hold.getUserId(), hold.getAmount());
-                wallet.setHeldBalance(wallet.getHeldBalance() - hold.getAmount());
-                wallet.setUpdatedAt(LocalDateTime.now());
+                applyBalanceChange(wallet, 0, -hold.getAmount());
                 walletRepository.save(wallet);
 
                 hold.setStatus(HoldStatus.CAPTURED);
@@ -229,6 +237,22 @@ public class WalletServiceImpl implements WalletService {
         }
     }
 
+    @Override
+    public WalletResponse getWalletByUserIdForAdmin(UUID userId) {
+        Wallet wallet = walletRepository.findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
+        return toWalletResponse(wallet);
+    }
+
+    @Override
+    public Page<TransactionResponse> getTransactionHistoryForAdmin(UUID userId, Pageable pageable) {
+        Wallet wallet = walletRepository.findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
+        return walletTransactionRepository
+                .findByWalletIdOrderByCreatedAtDesc(wallet.getId(), pageable)
+                .map(this::toTransactionResponse);
+    }
+
     public Wallet findOrCreateWallet(UUID userId) {
         return walletRepository.findByUserId(userId).orElseGet(() -> {
             Wallet w = Wallet.builder()
@@ -242,12 +266,23 @@ public class WalletServiceImpl implements WalletService {
     }
 
     private void releaseHoldInternal(Wallet wallet, BalanceHold hold) {
-        wallet.setAvailableBalance(wallet.getAvailableBalance() + hold.getAmount());
-        wallet.setHeldBalance(wallet.getHeldBalance() - hold.getAmount());
-        wallet.setUpdatedAt(LocalDateTime.now());
+        applyBalanceChange(wallet, hold.getAmount(), -hold.getAmount());
         hold.setStatus(HoldStatus.RELEASED);
+        hold.setUpdatedAt(LocalDateTime.now());
         balanceHoldRepository.save(hold);
         saveTransaction(wallet, TransactionType.RELEASE, "Release hold, lost bid", hold.getAmount(), hold.getAuctionId());
+    }
+
+    private void applyBalanceChange(Wallet wallet, long deltaAvailable, long deltaHeld) {
+        long newAvailable = wallet.getAvailableBalance() + deltaAvailable;
+        long newHeld = wallet.getHeldBalance() + deltaHeld;
+        if (newAvailable < 0 || newHeld < 0) {
+            throw new IllegalStateException(
+                    String.format("Saldo tidak boleh negatif. available=%d, held=%d", newAvailable, newHeld));
+        }
+        wallet.setAvailableBalance(newAvailable);
+        wallet.setHeldBalance(newHeld);
+        wallet.setUpdatedAt(LocalDateTime.now());
     }
 
     public WalletTransaction saveTransaction(Wallet wallet, TransactionType type, String description,

@@ -21,4 +21,7 @@ public interface WalletService {
 
     AuctionSettleResponse settleAuction(UUID auctionId, List<AuctionSettleRequest.WinnerEntry> winners);
     void releaseAllHoldsForAuction(UUID auctionId);
+
+    WalletResponse getWalletByUserIdForAdmin(UUID userId);
+    Page<TransactionResponse> getTransactionHistoryForAdmin(UUID userId, Pageable pageable);
 }
