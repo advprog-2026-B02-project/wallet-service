@@ -1,0 +1,299 @@
+package id.ac.ui.cs.advprog.bidmart.wallet.service;
+
+import id.ac.ui.cs.advprog.bidmart.wallet.dto.*;
+import id.ac.ui.cs.advprog.bidmart.wallet.model.*;
+import id.ac.ui.cs.advprog.bidmart.wallet.repository.*;
+import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+public class WalletServiceImpl implements WalletService {
+
+    private static final long WITHDRAW_FEE = 5000L;
+
+    private final WalletRepository walletRepository;
+    private final BalanceHoldRepository balanceHoldRepository;
+    private final WalletTransactionRepository walletTransactionRepository;
+
+    public WalletServiceImpl(WalletRepository walletRepository,
+                             BalanceHoldRepository balanceHoldRepository,
+                             WalletTransactionRepository walletTransactionRepository) {
+        this.walletRepository = walletRepository;
+        this.balanceHoldRepository = balanceHoldRepository;
+        this.walletTransactionRepository = walletTransactionRepository;
+    }
+
+    @Override
+    public WalletResponse getWallet(UUID userId) {
+        return toWalletResponse(findOrCreateWallet(userId));
+    }
+
+    @Override
+    public WalletResponse topUp(UUID userId, TopUpRequest request) {
+        Wallet wallet = findOrCreateWallet(userId);
+        wallet.setAvailableBalance(wallet.getAvailableBalance() + request.getAmount());
+        wallet.setUpdatedAt(LocalDateTime.now());
+        walletRepository.save(wallet);
+        saveTransaction(wallet, TransactionType.TOPUP, "Top-up saldo", request.getAmount(), null);
+        return toWalletResponse(wallet);
+    }
+
+    @Override
+    @Transactional
+    public WithdrawResponse withdraw(UUID userId, WithdrawRequest request) {
+        Wallet wallet = findOrCreateWallet(userId);
+        long total = request.getAmount() + WITHDRAW_FEE;
+        if (wallet.getAvailableBalance() < total) {
+            throw new IllegalStateException(
+                    String.format("Saldo tidak mencukupi. Tersedia: %d, Dibutuhkan: %d (termasuk biaya %d)",
+                            wallet.getAvailableBalance(), total, WITHDRAW_FEE));
+        }
+        wallet.setAvailableBalance(wallet.getAvailableBalance() - total);
+        wallet.setUpdatedAt(LocalDateTime.now());
+        walletRepository.save(wallet);
+        WalletTransaction txn = saveTransaction(wallet, TransactionType.WITHDRAW,
+                String.format("Penarikan ke %s %s (%s)",
+                        request.getBankCode(), request.getAccountNumber(), request.getAccountName()),
+                -total, null);
+        return WithdrawResponse.builder()
+                .transactionId(txn.getId())
+                .amount(request.getAmount())
+                .fee(WITHDRAW_FEE)
+                .netAmount(request.getAmount() - WITHDRAW_FEE)
+                .status("PROCESSING")
+                .estimatedCompletion(LocalDateTime.now().plusDays(1))
+                .build();
+    }
+
+    @Override
+    public Page<TransactionResponse> getTransactionHistory(UUID userId, Pageable pageable) {
+        Wallet wallet = findOrCreateWallet(userId);
+        return walletTransactionRepository
+                .findByWalletIdOrderByCreatedAtDesc(wallet.getId(), pageable)
+                .map(this::toTransactionResponse);
+    }
+
+    @Override
+    public TransactionResponse getTransaction(UUID userId, UUID transactionId) {
+        Wallet wallet = findOrCreateWallet(userId);
+        WalletTransaction txn = walletTransactionRepository.findById(transactionId)
+                .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + transactionId));
+        if (!txn.getWalletId().equals(wallet.getId())) {
+            throw new IllegalArgumentException("Transaction not found: " + transactionId);
+        }
+        return toTransactionResponse(txn);
+    }
+
+    @Override
+    @Transactional
+    public WalletResponse resetWallet(UUID userId) {
+        Wallet wallet = findOrCreateWallet(userId);
+        balanceHoldRepository.findAllByWalletId(wallet.getId()).stream()
+                .filter(h -> h.getStatus() == HoldStatus.ACTIVE)
+                .forEach(h -> releaseHoldInternal(wallet, h));
+        wallet.setAvailableBalance(0);
+        wallet.setHeldBalance(0);
+        wallet.setUpdatedAt(LocalDateTime.now());
+        walletRepository.save(wallet);
+        return toWalletResponse(wallet);
+    }
+
+    @Override
+    @Transactional
+    public HoldResponse createHold(HoldRequest request) {
+        Wallet wallet = findOrCreateWallet(request.getUserId());
+        if (wallet.getAvailableBalance() < request.getAmount()) {
+            throw new IllegalStateException(
+                    String.format("Saldo tidak mencukupi. Tersedia: %d, Dibutuhkan: %d",
+                            wallet.getAvailableBalance(), request.getAmount()));
+        }
+        balanceHoldRepository.findByUserIdAndAuctionIdAndStatus(
+                        request.getUserId(), request.getAuctionId(), HoldStatus.ACTIVE)
+                .ifPresent(existing -> releaseHoldInternal(wallet, existing));
+
+        wallet.setAvailableBalance(wallet.getAvailableBalance() - request.getAmount());
+        wallet.setHeldBalance(wallet.getHeldBalance() + request.getAmount());
+        wallet.setUpdatedAt(LocalDateTime.now());
+        walletRepository.save(wallet);
+
+        BalanceHold hold = BalanceHold.builder()
+                .walletId(wallet.getId())
+                .userId(request.getUserId())
+                .auctionId(request.getAuctionId())
+                .bidId(request.getBidId())
+                .amount(request.getAmount())
+                .status(HoldStatus.ACTIVE)
+                .createdAt(LocalDateTime.now())
+                .build();
+        balanceHoldRepository.save(hold);
+        saveTransaction(wallet, TransactionType.HOLD, "Hold balance for bid", -request.getAmount(), request.getAuctionId());
+        return toHoldResponse(hold);
+    }
+
+    @Override
+    public HoldResponse releaseHold(UUID holdId) {
+        BalanceHold hold = balanceHoldRepository.findById(holdId)
+                .orElseThrow(() -> new IllegalArgumentException("Hold not found: " + holdId));
+        if (hold.getStatus() != HoldStatus.ACTIVE) {
+            throw new IllegalStateException("Hold is not active: " + hold.getStatus());
+        }
+        Wallet wallet = walletRepository.findById(hold.getWalletId())
+                .orElseThrow(() -> new IllegalStateException("Wallet not found"));
+        releaseHoldInternal(wallet, hold);
+        walletRepository.save(wallet);
+        return toHoldResponse(hold);
+    }
+
+    @Override
+    public HoldResponse captureHold(UUID holdId) {
+        BalanceHold hold = balanceHoldRepository.findById(holdId)
+                .orElseThrow(() -> new IllegalArgumentException("Hold not found: " + holdId));
+        if (hold.getStatus() != HoldStatus.ACTIVE) {
+            throw new IllegalStateException("Hold is not active: " + hold.getStatus());
+        }
+        Wallet wallet = walletRepository.findById(hold.getWalletId())
+                .orElseThrow(() -> new IllegalStateException("Wallet not found"));
+        wallet.setHeldBalance(wallet.getHeldBalance() - hold.getAmount());
+        wallet.setUpdatedAt(LocalDateTime.now());
+        walletRepository.save(wallet);
+        hold.setStatus(HoldStatus.CAPTURED);
+        hold.setUpdatedAt(LocalDateTime.now());
+        balanceHoldRepository.save(hold);
+        saveTransaction(wallet, TransactionType.CAPTURE, "Bid payment", -hold.getAmount(), hold.getAuctionId());
+        return toHoldResponse(hold);
+    }
+
+    @Override
+    @Transactional
+    public AuctionSettleResponse settleAuction(UUID auctionId, List<AuctionSettleRequest.WinnerEntry> winners) {
+        List<BalanceHold> activeHolds = balanceHoldRepository.findByAuctionIdAndStatus(auctionId, HoldStatus.ACTIVE);
+
+        Set<UUID> winnerIds = winners.stream()
+                .map(AuctionSettleRequest.WinnerEntry::getUserId)
+                .collect(Collectors.toSet());
+        Map<UUID, Long> winnerAmounts = winners.stream()
+                .collect(Collectors.toMap(
+                        AuctionSettleRequest.WinnerEntry::getUserId,
+                        AuctionSettleRequest.WinnerEntry::getCaptureAmount));
+
+        List<AuctionSettleResponse.CapturedEntry> captured = new ArrayList<>();
+        List<AuctionSettleResponse.ReleasedEntry> released = new ArrayList<>();
+
+        for (BalanceHold hold : activeHolds) {
+            Wallet wallet = walletRepository.findById(hold.getWalletId())
+                    .orElseThrow(() -> new IllegalStateException("Wallet not found for hold: " + hold.getId()));
+
+            if (winnerIds.contains(hold.getUserId())) {
+                long captureAmount = winnerAmounts.getOrDefault(hold.getUserId(), hold.getAmount());
+                wallet.setHeldBalance(wallet.getHeldBalance() - hold.getAmount());
+                wallet.setUpdatedAt(LocalDateTime.now());
+                walletRepository.save(wallet);
+
+                hold.setStatus(HoldStatus.CAPTURED);
+                hold.setUpdatedAt(LocalDateTime.now());
+                balanceHoldRepository.save(hold);
+
+                WalletTransaction txn = saveTransaction(wallet, TransactionType.CAPTURE,
+                        "Pembayaran lelang - pemenang", -captureAmount, auctionId);
+                captured.add(new AuctionSettleResponse.CapturedEntry(hold.getId(), hold.getUserId(), captureAmount, txn.getId()));
+            } else {
+                releaseHoldInternal(wallet, hold);
+                walletRepository.save(wallet);
+                released.add(new AuctionSettleResponse.ReleasedEntry(hold.getId(), hold.getUserId(), hold.getAmount()));
+            }
+        }
+
+        return AuctionSettleResponse.builder()
+                .auctionId(auctionId)
+                .captured(captured)
+                .released(released)
+                .settledAt(LocalDateTime.now())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public void releaseAllHoldsForAuction(UUID auctionId) {
+        List<BalanceHold> activeHolds = balanceHoldRepository.findByAuctionIdAndStatus(auctionId, HoldStatus.ACTIVE);
+        for (BalanceHold hold : activeHolds) {
+            Wallet wallet = walletRepository.findById(hold.getWalletId())
+                    .orElseThrow(() -> new IllegalStateException("Wallet not found for hold: " + hold.getId()));
+            releaseHoldInternal(wallet, hold);
+            walletRepository.save(wallet);
+        }
+    }
+
+    public Wallet findOrCreateWallet(UUID userId) {
+        return walletRepository.findByUserId(userId).orElseGet(() -> {
+            Wallet w = Wallet.builder()
+                    .userId(userId)
+                    .availableBalance(0)
+                    .heldBalance(0)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            return walletRepository.save(w);
+        });
+    }
+
+    private void releaseHoldInternal(Wallet wallet, BalanceHold hold) {
+        wallet.setAvailableBalance(wallet.getAvailableBalance() + hold.getAmount());
+        wallet.setHeldBalance(wallet.getHeldBalance() - hold.getAmount());
+        wallet.setUpdatedAt(LocalDateTime.now());
+        hold.setStatus(HoldStatus.RELEASED);
+        balanceHoldRepository.save(hold);
+        saveTransaction(wallet, TransactionType.RELEASE, "Release hold, lost bid", hold.getAmount(), hold.getAuctionId());
+    }
+
+    public WalletTransaction saveTransaction(Wallet wallet, TransactionType type, String description,
+                                             long amount, UUID referenceId) {
+        WalletTransaction txn = WalletTransaction.builder()
+                .walletId(wallet.getId())
+                .type(type)
+                .amount(amount)
+                .balanceAfter(wallet.getAvailableBalance())
+                .description(description)
+                .referenceId(referenceId)
+                .createdAt(LocalDateTime.now())
+                .build();
+        return walletTransactionRepository.save(txn);
+    }
+
+    private WalletResponse toWalletResponse(Wallet wallet) {
+        return WalletResponse.builder()
+                .userId(wallet.getUserId())
+                .availableBalance(wallet.getAvailableBalance())
+                .heldBalance(wallet.getHeldBalance())
+                .totalBalance(wallet.getTotalBalance())
+                .updatedAt(wallet.getUpdatedAt())
+                .build();
+    }
+
+    private HoldResponse toHoldResponse(BalanceHold hold) {
+        return HoldResponse.builder()
+                .holdId(hold.getId())
+                .userId(hold.getUserId())
+                .auctionId(hold.getAuctionId())
+                .amount(hold.getAmount())
+                .status(hold.getStatus().name())
+                .createdAt(hold.getCreatedAt())
+                .build();
+    }
+
+    private TransactionResponse toTransactionResponse(WalletTransaction txn) {
+        return TransactionResponse.builder()
+                .id(txn.getId())
+                .type(txn.getType().name())
+                .amount(txn.getAmount())
+                .description(txn.getDescription())
+                .referenceId(txn.getReferenceId())
+                .balanceAfter(txn.getBalanceAfter())
+                .createdAt(txn.getCreatedAt())
+                .build();
+    }
+}

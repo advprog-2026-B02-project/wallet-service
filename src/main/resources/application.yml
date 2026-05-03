@@ -1,0 +1,64 @@
+spring:
+  application:
+    name: bidmart-wallet
+
+  datasource:
+    url: ${WALLET_DB_URL:jdbc:postgresql://localhost:5432/bidmart_wallet}
+    username: ${WALLET_DB_USERNAME:postgres}
+    password: ${WALLET_DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: wallet-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "id.ac.ui.cs.advprog.bidmart.wallet.event"
+
+server:
+  port: ${SERVER_PORT:8082}
+
+jwt:
+  secret: ${JWT_SECRET:your-256-bit-secret-key-change-in-production-please}
+
+internal:
+  service-token: ${INTERNAL_SERVICE_TOKEN:internal-secret-change-in-production}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,info
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  datasource:
+    url: jdbc:h2:mem:bidmart_wallet_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+
+  kafka:
+    bootstrap-servers: ${spring.embedded.kafka.brokers:localhost:9092}
