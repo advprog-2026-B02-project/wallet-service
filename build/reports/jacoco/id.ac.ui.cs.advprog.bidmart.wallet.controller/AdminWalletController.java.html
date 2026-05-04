@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminWalletController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">wallet-service</a> &gt; <a href="index.source.html" class="el_package">id.ac.ui.cs.advprog.bidmart.wallet.controller</a> &gt; <span class="el_source">AdminWalletController.java</span></div><h1>AdminWalletController.java</h1><pre class="source lang-java linenums">package id.ac.ui.cs.advprog.bidmart.wallet.controller;
+
+import id.ac.ui.cs.advprog.bidmart.wallet.dto.TransactionResponse;
+import id.ac.ui.cs.advprog.bidmart.wallet.dto.WalletResponse;
+import id.ac.ui.cs.advprog.bidmart.wallet.service.WalletService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
+
+import java.util.UUID;
+
+@RestController
+@RequestMapping(&quot;/admin/v1/wallet&quot;)
+@RequiredArgsConstructor
+public class AdminWalletController {
+
+    private final WalletService walletService;
+
+    @Value(&quot;${internal.service-token}&quot;)
+    private String serviceToken;
+
+    @GetMapping(&quot;/users/{userId}&quot;)
+    public ResponseEntity&lt;WalletResponse&gt; getWallet(@PathVariable UUID userId,
+                                                    @RequestHeader(value = &quot;X-Service-Token&quot;, required = false) String token) {
+<span class="fc" id="L31">        verifyServiceToken(token);</span>
+<span class="fc" id="L32">        return ResponseEntity.ok(walletService.getWalletByUserIdForAdmin(userId));</span>
+    }
+
+    @GetMapping(&quot;/users/{userId}/transactions&quot;)
+    public ResponseEntity&lt;Page&lt;TransactionResponse&gt;&gt; getTransactions(
+            @PathVariable UUID userId,
+            @RequestHeader(value = &quot;X-Service-Token&quot;, required = false) String token,
+            @PageableDefault(size = 20, sort = &quot;createdAt&quot;) Pageable pageable) {
+<span class="fc" id="L40">        verifyServiceToken(token);</span>
+<span class="fc" id="L41">        return ResponseEntity.ok(walletService.getTransactionHistoryForAdmin(userId, pageable));</span>
+    }
+
+    private void verifyServiceToken(String token) {
+<span class="pc bpc" id="L45" title="2 of 4 branches missed.">        if (serviceToken == null || serviceToken.isBlank()) {</span>
+<span class="nc" id="L46">            return;</span>
+        }
+<span class="fc bfc" id="L48" title="All 2 branches covered.">        if (!serviceToken.equals(token)) {</span>
+<span class="fc" id="L49">            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, &quot;Invalid service token&quot;);</span>
+        }
+<span class="fc" id="L51">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

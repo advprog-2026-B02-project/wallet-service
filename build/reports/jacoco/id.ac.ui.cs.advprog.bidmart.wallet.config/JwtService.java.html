@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JwtService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">wallet-service</a> &gt; <a href="index.source.html" class="el_package">id.ac.ui.cs.advprog.bidmart.wallet.config</a> &gt; <span class="el_source">JwtService.java</span></div><h1>JwtService.java</h1><pre class="source lang-java linenums">package id.ac.ui.cs.advprog.bidmart.wallet.config;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+
+@Service
+<span class="fc" id="L13">public class JwtService {</span>
+
+    @Value(&quot;${jwt.secret}&quot;)
+    private String secret;
+
+    private SecretKey getSigningKey() {
+<span class="nc" id="L19">        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));</span>
+    }
+
+    public String extractSubject(String token) {
+<span class="nc" id="L23">        return extractClaims(token).getSubject();</span>
+    }
+
+    public boolean isTokenValid(String token) {
+        try {
+<span class="nc" id="L28">            extractClaims(token);</span>
+<span class="nc" id="L29">            return true;</span>
+<span class="nc" id="L30">        } catch (Exception e) {</span>
+<span class="nc" id="L31">            return false;</span>
+        }
+    }
+
+    private Claims extractClaims(String token) {
+<span class="nc" id="L36">        return Jwts.parser()</span>
+<span class="nc" id="L37">                .verifyWith(getSigningKey())</span>
+<span class="nc" id="L38">                .build()</span>
+<span class="nc" id="L39">                .parseSignedClaims(token)</span>
+<span class="nc" id="L40">                .getPayload();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
