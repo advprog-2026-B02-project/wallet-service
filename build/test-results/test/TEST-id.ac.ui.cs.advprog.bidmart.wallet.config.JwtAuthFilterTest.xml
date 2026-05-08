@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="id.ac.ui.cs.advprog.bidmart.wallet.config.JwtAuthFilterTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-05-08T13:36:03.863Z" hostname="NAIL" time="5.777">
+  <properties/>
+  <testcase name="doFilterInternal_skipsWhenAuthorizationHeaderIsNotBearerToken()" classname="id.ac.ui.cs.advprog.bidmart.wallet.config.JwtAuthFilterTest" time="5.459"/>
+  <testcase name="doFilterInternal_setsAuthenticationWhenTokenIsValid()" classname="id.ac.ui.cs.advprog.bidmart.wallet.config.JwtAuthFilterTest" time="0.242"/>
+  <testcase name="doFilterInternal_skipsWhenTokenIsInvalid()" classname="id.ac.ui.cs.advprog.bidmart.wallet.config.JwtAuthFilterTest" time="0.006"/>
+  <testcase name="doFilterInternal_skipsWhenAuthorizationHeaderMissing()" classname="id.ac.ui.cs.advprog.bidmart.wallet.config.JwtAuthFilterTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build what is described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html#0.3
+WARNING: A Java agent has been loaded dynamically (C:\Users\naail\.gradle\caches\modules-2\files-2.1\net.bytebuddy\byte-buddy-agent\1.15.11\a38b16385e867f59a641330f0362ebe742788ed8\byte-buddy-agent-1.15.11.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

@@ -23,25 +23,25 @@ public class WalletAuctionEventListener {
         containerFactory = &quot;auctionSettledListenerFactory&quot;
     )
     public void onAuctionSettled(AuctionSettledEvent event) {
-<span class="nc" id="L26">        log.info(&quot;Received auction.settled: auctionId={}, type={}, winners={}&quot;,</span>
-<span class="nc" id="L27">                event.getAuctionId(), event.getAuctionType(),</span>
-<span class="nc bnc" id="L28" title="All 2 branches missed.">                event.getWinners() == null ? 0 : event.getWinners().size());</span>
+<span class="fc" id="L26">        log.info(&quot;Received auction.settled: auctionId={}, type={}, winners={}&quot;,</span>
+<span class="fc" id="L27">                event.getAuctionId(), event.getAuctionType(),</span>
+<span class="fc bfc" id="L28" title="All 2 branches covered.">                event.getWinners() == null ? 0 : event.getWinners().size());</span>
 
         List&lt;AuctionSettledEvent.WinnerEntry&gt; winners =
-<span class="nc bnc" id="L31" title="All 2 branches missed.">                event.getWinners() != null ? event.getWinners() : Collections.emptyList();</span>
+<span class="fc bfc" id="L31" title="All 2 branches covered.">                event.getWinners() != null ? event.getWinners() : Collections.emptyList();</span>
 
-<span class="nc bnc" id="L33" title="All 2 branches missed.">        if (winners.isEmpty()) {</span>
-<span class="nc" id="L34">            log.info(&quot;No winners in event for auctionId={} (type={}), skipping.&quot;,</span>
-<span class="nc" id="L35">                    event.getAuctionId(), event.getAuctionType());</span>
-<span class="nc" id="L36">            return;</span>
+<span class="fc bfc" id="L33" title="All 2 branches covered.">        if (winners.isEmpty()) {</span>
+<span class="fc" id="L34">            log.info(&quot;No winners in event for auctionId={} (type={}), skipping.&quot;,</span>
+<span class="fc" id="L35">                    event.getAuctionId(), event.getAuctionType());</span>
+<span class="fc" id="L36">            return;</span>
         }
 
-<span class="nc" id="L39">        List&lt;AuctionSettleRequest.WinnerEntry&gt; winnerEntries = winners.stream()</span>
-<span class="nc" id="L40">                .map(w -&gt; new AuctionSettleRequest.WinnerEntry(w.getUserId(), w.getAmount()))</span>
-<span class="nc" id="L41">                .toList();</span>
+<span class="fc" id="L39">        List&lt;AuctionSettleRequest.WinnerEntry&gt; winnerEntries = winners.stream()</span>
+<span class="fc" id="L40">                .map(w -&gt; new AuctionSettleRequest.WinnerEntry(w.getUserId(), w.getAmount()))</span>
+<span class="fc" id="L41">                .toList();</span>
 
-<span class="nc" id="L43">        walletService.settleAuction(event.getAuctionId(), winnerEntries);</span>
-<span class="nc" id="L44">    }</span>
+<span class="fc" id="L43">        walletService.settleAuction(event.getAuctionId(), winnerEntries);</span>
+<span class="fc" id="L44">    }</span>
 
     @KafkaListener(
         topics = &quot;auction.unsold&quot;,
@@ -49,8 +49,8 @@ public class WalletAuctionEventListener {
         containerFactory = &quot;auctionUnsoldListenerFactory&quot;
     )
     public void onAuctionUnsold(AuctionUnsoldEvent event) {
-<span class="nc" id="L52">        log.info(&quot;Received auction.unsold: auctionId={}&quot;, event.getAuctionId());</span>
-<span class="nc" id="L53">        walletService.releaseAllHoldsForAuction(event.getAuctionId());</span>
-<span class="nc" id="L54">    }</span>
+<span class="fc" id="L52">        log.info(&quot;Received auction.unsold: auctionId={}&quot;, event.getAuctionId());</span>
+<span class="fc" id="L53">        walletService.releaseAllHoldsForAuction(event.getAuctionId());</span>
+<span class="fc" id="L54">    }</span>
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="id.ac.ui.cs.advprog.bidmart.wallet.controller.WalletControllerTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-05-08T13:36:47.516Z" hostname="NAIL" time="0.13">
+  <properties/>
+  <testcase name="topUp_usesResolvedUserId()" classname="id.ac.ui.cs.advprog.bidmart.wallet.controller.WalletControllerTest" time="0.003"/>
+  <testcase name="withdraw_returnsCreatedResponse()" classname="id.ac.ui.cs.advprog.bidmart.wallet.controller.WalletControllerTest" time="0.006"/>
+  <testcase name="reset_usesResolvedUserId()" classname="id.ac.ui.cs.advprog.bidmart.wallet.controller.WalletControllerTest" time="0.002"/>
+  <testcase name="getWallet_throwsWhenPrincipalIsNull()" classname="id.ac.ui.cs.advprog.bidmart.wallet.controller.WalletControllerTest" time="0.004"/>
+  <testcase name="releaseAndCaptureHold_delegateToService()" classname="id.ac.ui.cs.advprog.bidmart.wallet.controller.WalletControllerTest" time="0.004"/>
+  <testcase name="getTransactions_usesResolvedUserIdAndPageable()" classname="id.ac.ui.cs.advprog.bidmart.wallet.controller.WalletControllerTest" time="0.001"/>
+  <testcase name="createHold_overridesUserIdFromPrincipal()" classname="id.ac.ui.cs.advprog.bidmart.wallet.controller.WalletControllerTest" time="0.002"/>
+  <testcase name="topUp_throwsWhenPrincipalNameIsNull()" classname="id.ac.ui.cs.advprog.bidmart.wallet.controller.WalletControllerTest" time="0.094"/>
+  <testcase name="getTransaction_usesResolvedUserId()" classname="id.ac.ui.cs.advprog.bidmart.wallet.controller.WalletControllerTest" time="0.004"/>
+  <testcase name="getWallet_returnsWalletForResolvedUser()" classname="id.ac.ui.cs.advprog.bidmart.wallet.controller.WalletControllerTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta http-equiv="x-ua-compatible" content="IE=edge"/>
+<title>Test results - createHold_returns201()</title>
+<link href="../css/base-style.css" rel="stylesheet" type="text/css"/>
+<link href="../css/style.css" rel="stylesheet" type="text/css"/>
+<script src="../js/report.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="content">
+<div class="breadcrumbs">
+<a class="breadcrumb" href="../index.html">all</a> &gt; 
+<a class="breadcrumb" href="index.html">id.ac.ui.cs.advprog.bidmart.wallet.controller.WalletControllerIntegrationTest</a> &gt; 
+<span class="breadcrumb">createHold_returns201()</span>
+</div>
+<div class="tab-container">
+<ul class="tabLinks">
+<li>
+<a class="successGroup" href="#">Gradle Test Run :test</a>
+</li>
+</ul>
+<div class="tab">
+<h2>Gradle Test Run :test</h2>
+<h1>createHold_returns201()</h1>
+<div class="tab-container">
+<ul class="tabLinks">
+<li>
+<a class="" href="#">summary</a>
+</li>
+<li>
+<a class="" href="#">standard output</a>
+</li>
+</ul>
+<div class="tab">
+<h2>summary</h2>
+<div>
+<div class="summary">
+<table>
+<tr>
+<td>
+<div class="summaryGroup">
+<table>
+<tr>
+<td>
+<div class="infoBox">
+<div class="counter">1</div>
+<p>tests</p>
+</div>
+</td>
+<td>
+<div class="infoBox">
+<div class="counter">0</div>
+<p>failures</p>
+</div>
+</td>
+<td>
+<div class="infoBox">
+<div class="counter">0</div>
+<p>skipped</p>
+</div>
+</td>
+<td>
+<div class="infoBox duration">
+<div class="counter">1.210s</div>
+<p>duration</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</td>
+<td>
+<div class="infoBox success successRate">
+<div class="percent">100%</div>
+<p>successful</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="tab">
+<h2>standard output</h2>
+<span class="code">
+<pre id="root-0-test-stdout-createHold_returns201()">2026-05-08T20:36:45.430+07:00  INFO 19644 --- [bidmart-wallet] [er-event-thread] state.change.logger                      : [Controller id=0 epoch=1] Changed partition __consumer_offsets-4 from NewPartition to OnlinePartition with state LeaderAndIsr(leader=0, leaderEpoch=0, isrWithBrokerEpoch=List(BrokerState(brokerId=0, brokerEpoch=-1)), leaderRecoveryState=RECOVERED, partitionEpoch=0)
+2026-05-08T20:36:45.430+07:00  INFO 19644 --- [bidmart-wallet] [er-event-thread] state.change.logger                      : [Controller id=0 epoch=1] Changed partition __consumer_offsets-3 from NewPartition to OnlinePartition with state LeaderAndIsr(leader=0, leaderEpoch=0, isrWithBrokerEpoch=List(BrokerState(brokerId=0, brokerEpoch=-1)), leaderRecoveryState=RECOVERED, partitionEpoch=0)
+2026-05-08T20:36:45.430+07:00  INFO 19644 --- [bidmart-wallet] [er-event-thread] state.change.logger                      : [Controller id=0 epoch=1] Changed partition __consumer_offsets-2 from NewPartition to OnlinePartition with state LeaderAndIsr(leader=0, leaderEpoch=0, isrWithBrokerEpoch=List(BrokerState(brokerId=0, brokerEpoch=-1)), leaderRecoveryState=RECOVERED, partitionEpoch=0)
+2026-05-08T20:36:45.431+07:00  INFO 19644 --- [bidmart-wallet] [er-event-thread] state.change.logger                      : [Controller id=0 epoch=1] Changed partition __consumer_offsets-0 from NewPartition to OnlinePartition with state LeaderAndIsr(leader=0, leaderEpoch=0, isrWithBrokerEpoch=List(BrokerState(brokerId=0, brokerEpoch=-1)), leaderRecoveryState=RECOVERED, partitionEpoch=0)
+2026-05-08T20:36:45.431+07:00  INFO 19644 --- [bidmart-wallet] [er-event-thread] state.change.logger                      : [Controller id=0 epoch=1] Changed partition __consumer_offsets-1 from NewPartition to OnlinePartition with state LeaderAndIsr(leader=0, leaderEpoch=0, isrWithBrokerEpoch=List(BrokerState(brokerId=0, brokerEpoch=-1)), leaderRecoveryState=RECOVERED, partitionEpoch=0)
+2026-05-08T20:36:45.431+07:00  INFO 19644 --- [bidmart-wallet] [er-event-thread] state.change.logger                      : [Controller id=0 epoch=1] Sending LeaderAndIsr request to broker 0 with 5 become-leader and 0 become-follower partitions
+2026-05-08T20:36:45.432+07:00  INFO 19644 --- [bidmart-wallet] [er-event-thread] state.change.logger                      : [Controller id=0 epoch=1] Sending UpdateMetadata request to brokers HashSet(0) for 5 partitions
+2026-05-08T20:36:45.433+07:00  INFO 19644 --- [bidmart-wallet] [er-event-thread] state.change.logger                      : [Controller id=0 epoch=1] Sending UpdateMetadata request to brokers HashSet() for 0 partitions
+2026-05-08T20:36:45.434+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] state.change.logger                      : [Broker id=0] Handling LeaderAndIsr request correlationId 5 from controller 0 for 5 partitions
+2026-05-08T20:36:45.445+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.server.ReplicaFetcherManager       : [ReplicaFetcherManager on broker 0] Removed fetcher for partitions HashSet(__consumer_offsets-4, __consumer_offsets-3, __consumer_offsets-2, __consumer_offsets-0, __consumer_offsets-1)
+2026-05-08T20:36:45.445+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] state.change.logger                      : [Broker id=0] Stopped fetchers as part of LeaderAndIsr request correlationId 5 from controller 0 epoch 1 as part of the become-leader transition for 5 partitions
+2026-05-08T20:36:45.466+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.log.UnifiedLog$                    : [LogLoader partition=__consumer_offsets-3, dir=C:\Users\naail\AppData\Local\Temp\spring.kafka.4d24a1bb-311f-43df-8a6d-f55e837beb5e15859137383385148944] Loading producer state till offset 0 with message format version 2
+2026-05-08T20:36:45.468+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.log.LogManager                     : Created log for partition __consumer_offsets-3 in C:\Users\naail\AppData\Local\Temp\spring.kafka.4d24a1bb-311f-43df-8a6d-f55e837beb5e15859137383385148944\__consumer_offsets-3 with properties {cleanup.policy=compact, compression.type=&quot;producer&quot;, segment.bytes=104857600}
+2026-05-08T20:36:45.470+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.cluster.Partition                  : [Partition __consumer_offsets-3 broker=0] No checkpointed highwatermark is found for partition __consumer_offsets-3
+2026-05-08T20:36:45.471+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.cluster.Partition                  : [Partition __consumer_offsets-3 broker=0] Log loaded for partition __consumer_offsets-3 with initial high watermark 0
+2026-05-08T20:36:45.472+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] state.change.logger                      : [Broker id=0] Leader __consumer_offsets-3 with topic id Some(EaP6QF1pRSeDFrluXC2y2A) starts at leader epoch 0 from offset 0 with partition epoch 0, high watermark 0, ISR [0], adding replicas [] and removing replicas [] . Previous leader None and previous leader epoch was -1.
+2026-05-08T20:36:45.492+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.log.UnifiedLog$                    : [LogLoader partition=__consumer_offsets-2, dir=C:\Users\naail\AppData\Local\Temp\spring.kafka.4d24a1bb-311f-43df-8a6d-f55e837beb5e15859137383385148944] Loading producer state till offset 0 with message format version 2
+2026-05-08T20:36:45.497+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.log.LogManager                     : Created log for partition __consumer_offsets-2 in C:\Users\naail\AppData\Local\Temp\spring.kafka.4d24a1bb-311f-43df-8a6d-f55e837beb5e15859137383385148944\__consumer_offsets-2 with properties {cleanup.policy=compact, compression.type=&quot;producer&quot;, segment.bytes=104857600}
+2026-05-08T20:36:45.497+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.cluster.Partition                  : [Partition __consumer_offsets-2 broker=0] No checkpointed highwatermark is found for partition __consumer_offsets-2
+2026-05-08T20:36:45.497+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.cluster.Partition                  : [Partition __consumer_offsets-2 broker=0] Log loaded for partition __consumer_offsets-2 with initial high watermark 0
+2026-05-08T20:36:45.498+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] state.change.logger                      : [Broker id=0] Leader __consumer_offsets-2 with topic id Some(EaP6QF1pRSeDFrluXC2y2A) starts at leader epoch 0 from offset 0 with partition epoch 0, high watermark 0, ISR [0], adding replicas [] and removing replicas [] . Previous leader None and previous leader epoch was -1.
+2026-05-08T20:36:45.516+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.log.UnifiedLog$                    : [LogLoader partition=__consumer_offsets-4, dir=C:\Users\naail\AppData\Local\Temp\spring.kafka.4d24a1bb-311f-43df-8a6d-f55e837beb5e15859137383385148944] Loading producer state till offset 0 with message format version 2
+2026-05-08T20:36:45.518+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.log.LogManager                     : Created log for partition __consumer_offsets-4 in C:\Users\naail\AppData\Local\Temp\spring.kafka.4d24a1bb-311f-43df-8a6d-f55e837beb5e15859137383385148944\__consumer_offsets-4 with properties {cleanup.policy=compact, compression.type=&quot;producer&quot;, segment.bytes=104857600}
+2026-05-08T20:36:45.518+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.cluster.Partition                  : [Partition __consumer_offsets-4 broker=0] No checkpointed highwatermark is found for partition __consumer_offsets-4
+2026-05-08T20:36:45.518+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.cluster.Partition                  : [Partition __consumer_offsets-4 broker=0] Log loaded for partition __consumer_offsets-4 with initial high watermark 0
+2026-05-08T20:36:45.518+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] state.change.logger                      : [Broker id=0] Leader __consumer_offsets-4 with topic id Some(EaP6QF1pRSeDFrluXC2y2A) starts at leader epoch 0 from offset 0 with partition epoch 0, high watermark 0, ISR [0], adding replicas [] and removing replicas [] . Previous leader None and previous leader epoch was -1.
+2026-05-08T20:36:45.533+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.log.UnifiedLog$                    : [LogLoader partition=__consumer_offsets-1, dir=C:\Users\naail\AppData\Local\Temp\spring.kafka.4d24a1bb-311f-43df-8a6d-f55e837beb5e15859137383385148944] Loading producer state till offset 0 with message format version 2
+2026-05-08T20:36:45.535+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.log.LogManager                     : Created log for partition __consumer_offsets-1 in C:\Users\naail\AppData\Local\Temp\spring.kafka.4d24a1bb-311f-43df-8a6d-f55e837beb5e15859137383385148944\__consumer_offsets-1 with properties {cleanup.policy=compact, compression.type=&quot;producer&quot;, segment.bytes=104857600}
+2026-05-08T20:36:45.536+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.cluster.Partition                  : [Partition __consumer_offsets-1 broker=0] No checkpointed highwatermark is found for partition __consumer_offsets-1
+2026-05-08T20:36:45.536+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.cluster.Partition                  : [Partition __consumer_offsets-1 broker=0] Log loaded for partition __consumer_offsets-1 with initial high watermark 0
+2026-05-08T20:36:45.536+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] state.change.logger                      : [Broker id=0] Leader __consumer_offsets-1 with topic id Some(EaP6QF1pRSeDFrluXC2y2A) starts at leader epoch 0 from offset 0 with partition epoch 0, high watermark 0, ISR [0], adding replicas [] and removing replicas [] . Previous leader None and previous leader epoch was -1.
+2026-05-08T20:36:45.553+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.log.UnifiedLog$                    : [LogLoader partition=__consumer_offsets-0, dir=C:\Users\naail\AppData\Local\Temp\spring.kafka.4d24a1bb-311f-43df-8a6d-f55e837beb5e15859137383385148944] Loading producer state till offset 0 with message format version 2
+2026-05-08T20:36:45.554+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.log.LogManager                     : Created log for partition __consumer_offsets-0 in C:\Users\naail\AppData\Local\Temp\spring.kafka.4d24a1bb-311f-43df-8a6d-f55e837beb5e15859137383385148944\__consumer_offsets-0 with properties {cleanup.policy=compact, compression.type=&quot;producer&quot;, segment.bytes=104857600}
+2026-05-08T20:36:45.555+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.cluster.Partition                  : [Partition __consumer_offsets-0 broker=0] No checkpointed highwatermark is found for partition __consumer_offsets-0
+2026-05-08T20:36:45.556+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] kafka.cluster.Partition                  : [Partition __consumer_offsets-0 broker=0] Log loaded for partition __consumer_offsets-0 with initial high watermark 0
+2026-05-08T20:36:45.556+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] state.change.logger                      : [Broker id=0] Leader __consumer_offsets-0 with topic id Some(EaP6QF1pRSeDFrluXC2y2A) starts at leader epoch 0 from offset 0 with partition epoch 0, high watermark 0, ISR [0], adding replicas [] and removing replicas [] . Previous leader None and previous leader epoch was -1.
+2026-05-08T20:36:45.564+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] k.coordinator.group.GroupCoordinator     : [GroupCoordinator 0]: Elected as the group coordinator for partition 3 in epoch 0
+2026-05-08T20:36:45.566+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] k.c.group.GroupMetadataManager           : [GroupMetadataManager brokerId=0] Scheduling loading of offsets and group metadata from __consumer_offsets-3 for epoch 0
+2026-05-08T20:36:45.572+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] k.coordinator.group.GroupCoordinator     : [GroupCoordinator 0]: Elected as the group coordinator for partition 2 in epoch 0
+2026-05-08T20:36:45.572+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] k.c.group.GroupMetadataManager           : [GroupMetadataManager brokerId=0] Scheduling loading of offsets and group metadata from __consumer_offsets-2 for epoch 0
+2026-05-08T20:36:45.572+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] k.coordinator.group.GroupCoordinator     : [GroupCoordinator 0]: Elected as the group coordinator for partition 4 in epoch 0
+2026-05-08T20:36:45.572+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] k.c.group.GroupMetadataManager           : [GroupMetadataManager brokerId=0] Scheduling loading of offsets and group metadata from __consumer_offsets-4 for epoch 0
+2026-05-08T20:36:45.573+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] k.coordinator.group.GroupCoordinator     : [GroupCoordinator 0]: Elected as the group coordinator for partition 1 in epoch 0
+2026-05-08T20:36:45.573+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] k.c.group.GroupMetadataManager           : [GroupMetadataManager brokerId=0] Scheduling loading of offsets and group metadata from __consumer_offsets-1 for epoch 0
+2026-05-08T20:36:45.573+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] k.coordinator.group.GroupCoordinator     : [GroupCoordinator 0]: Elected as the group coordinator for partition 0 in epoch 0
+2026-05-08T20:36:45.573+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] k.c.group.GroupMetadataManager           : [GroupMetadataManager brokerId=0] Scheduling loading of offsets and group metadata from __consumer_offsets-0 for epoch 0
+2026-05-08T20:36:45.573+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] state.change.logger                      : [Broker id=0] Finished LeaderAndIsr request in 140ms correlationId 5 from controller 0 for 5 partitions
+2026-05-08T20:36:45.577+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-4] state.change.logger                      : [Broker id=0] Add 5 partitions and deleted 0 partitions from metadata cache in response to UpdateMetadata request sent by controller 0 epoch 1 with correlation id 6
+2026-05-08T20:36:45.588+07:00  INFO 19644 --- [bidmart-wallet] [adata-manager-0] k.c.group.GroupMetadataManager           : [GroupMetadataManager brokerId=0] Finished loading offsets and group metadata from __consumer_offsets-3 in 17 milliseconds for epoch 0, of which 6 milliseconds was spent in the scheduler.
+2026-05-08T20:36:45.590+07:00  INFO 19644 --- [bidmart-wallet] [adata-manager-0] k.c.group.GroupMetadataManager           : [GroupMetadataManager brokerId=0] Finished loading offsets and group metadata from __consumer_offsets-2 in 18 milliseconds for epoch 0, of which 18 milliseconds was spent in the scheduler.
+2026-05-08T20:36:45.591+07:00  INFO 19644 --- [bidmart-wallet] [adata-manager-0] k.c.group.GroupMetadataManager           : [GroupMetadataManager brokerId=0] Finished loading offsets and group metadata from __consumer_offsets-4 in 18 milliseconds for epoch 0, of which 17 milliseconds was spent in the scheduler.
+2026-05-08T20:36:45.591+07:00  INFO 19644 --- [bidmart-wallet] [adata-manager-0] k.c.group.GroupMetadataManager           : [GroupMetadataManager brokerId=0] Finished loading offsets and group metadata from __consumer_offsets-1 in 18 milliseconds for epoch 0, of which 18 milliseconds was spent in the scheduler.
+2026-05-08T20:36:45.592+07:00  INFO 19644 --- [bidmart-wallet] [adata-manager-0] k.c.group.GroupMetadataManager           : [GroupMetadataManager brokerId=0] Finished loading offsets and group metadata from __consumer_offsets-0 in 18 milliseconds for epoch 0, of which 18 milliseconds was spent in the scheduler.
+2026-05-08T20:36:45.702+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-wallet-service-2, groupId=wallet-service] Discovered group coordinator localhost:49694 (id: 2147483647 rack: null)
+2026-05-08T20:36:45.703+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-wallet-service-1, groupId=wallet-service] Discovered group coordinator localhost:49694 (id: 2147483647 rack: null)
+2026-05-08T20:36:45.708+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-wallet-service-2, groupId=wallet-service] (Re-)joining group
+2026-05-08T20:36:45.708+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-wallet-service-1, groupId=wallet-service] (Re-)joining group
+2026-05-08T20:36:45.764+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-4] k.coordinator.group.GroupCoordinator     : [GroupCoordinator 0]: Dynamic member with unknown member id joins group wallet-service in Empty state. Created a new member id consumer-wallet-service-2-4c69b89c-0cbe-4875-89cc-dcf2f4e2fee5 and request the member to rejoin with this id.
+2026-05-08T20:36:45.768+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-7] k.coordinator.group.GroupCoordinator     : [GroupCoordinator 0]: Dynamic member with unknown member id joins group wallet-service in Empty state. Created a new member id consumer-wallet-service-1-da10f4e8-371f-4a94-863e-366c63ecb294 and request the member to rejoin with this id.
+2026-05-08T20:36:45.772+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-wallet-service-2, groupId=wallet-service] Request joining group due to: need to re-join with the given member-id: consumer-wallet-service-2-4c69b89c-0cbe-4875-89cc-dcf2f4e2fee5
+2026-05-08T20:36:45.772+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-wallet-service-1, groupId=wallet-service] Request joining group due to: need to re-join with the given member-id: consumer-wallet-service-1-da10f4e8-371f-4a94-863e-366c63ecb294
+2026-05-08T20:36:45.773+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-wallet-service-1, groupId=wallet-service] (Re-)joining group
+2026-05-08T20:36:45.773+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-wallet-service-2, groupId=wallet-service] (Re-)joining group
+2026-05-08T20:36:45.791+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-0] k.coordinator.group.GroupCoordinator     : [GroupCoordinator 0]: Preparing to rebalance group wallet-service in state PreparingRebalance with old generation 0 (__consumer_offsets-1) (reason: Adding new member consumer-wallet-service-1-da10f4e8-371f-4a94-863e-366c63ecb294 with group instance id None; client reason: need to re-join with the given member-id: consumer-wallet-service-1-da10f4e8-371f-4a94-863e-366c63ecb294)
+2026-05-08T20:36:45.801+07:00  INFO 19644 --- [bidmart-wallet] [cutor-Rebalance] k.coordinator.group.GroupCoordinator     : [GroupCoordinator 0]: Stabilized group wallet-service generation 1 (__consumer_offsets-1) with 2 members
+2026-05-08T20:36:45.803+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-wallet-service-2, groupId=wallet-service] Successfully joined group with generation Generation{generationId=1, memberId='consumer-wallet-service-2-4c69b89c-0cbe-4875-89cc-dcf2f4e2fee5', protocol='range'}
+2026-05-08T20:36:45.804+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-wallet-service-1, groupId=wallet-service] Successfully joined group with generation Generation{generationId=1, memberId='consumer-wallet-service-1-da10f4e8-371f-4a94-863e-366c63ecb294', protocol='range'}
+2026-05-08T20:36:45.822+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-wallet-service-1, groupId=wallet-service] Finished assignment for group at generation 1: {consumer-wallet-service-2-4c69b89c-0cbe-4875-89cc-dcf2f4e2fee5=Assignment(partitions=[auction.settled-0]), consumer-wallet-service-1-da10f4e8-371f-4a94-863e-366c63ecb294=Assignment(partitions=[auction.unsold-0])}
+2026-05-08T20:36:45.830+07:00  INFO 19644 --- [bidmart-wallet] [quest-handler-3] k.coordinator.group.GroupCoordinator     : [GroupCoordinator 0]: Assignment received from leader consumer-wallet-service-1-da10f4e8-371f-4a94-863e-366c63ecb294 for group wallet-service for generation 1. The group has 2 members, 0 of which are static.
+2026-05-08T20:36:45.924+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-wallet-service-2, groupId=wallet-service] Successfully synced group in generation Generation{generationId=1, memberId='consumer-wallet-service-2-4c69b89c-0cbe-4875-89cc-dcf2f4e2fee5', protocol='range'}
+2026-05-08T20:36:45.925+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-wallet-service-1, groupId=wallet-service] Successfully synced group in generation Generation{generationId=1, memberId='consumer-wallet-service-1-da10f4e8-371f-4a94-863e-366c63ecb294', protocol='range'}
+2026-05-08T20:36:45.925+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-wallet-service-2, groupId=wallet-service] Notifying assignor about the new Assignment(partitions=[auction.settled-0])
+2026-05-08T20:36:45.925+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-wallet-service-1, groupId=wallet-service] Notifying assignor about the new Assignment(partitions=[auction.unsold-0])
+2026-05-08T20:36:45.931+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#1-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-wallet-service-2, groupId=wallet-service] Adding newly assigned partitions: auction.settled-0
+2026-05-08T20:36:45.931+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#0-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-wallet-service-1, groupId=wallet-service] Adding newly assigned partitions: auction.unsold-0
+2026-05-08T20:36:45.954+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-wallet-service-2, groupId=wallet-service] Found no committed offset for partition auction.settled-0
+2026-05-08T20:36:45.954+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-wallet-service-1, groupId=wallet-service] Found no committed offset for partition auction.unsold-0
+2026-05-08T20:36:45.987+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#0-0-C-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=consumer-wallet-service-1, groupId=wallet-service] Resetting offset for partition auction.unsold-0 to position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:49694 (id: 0 rack: null)], epoch=0}}.
+2026-05-08T20:36:45.987+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#1-0-C-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=consumer-wallet-service-2, groupId=wallet-service] Resetting offset for partition auction.settled-0 to position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:49694 (id: 0 rack: null)], epoch=0}}.
+2026-05-08T20:36:45.988+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#0-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : wallet-service: partitions assigned: [auction.unsold-0]
+2026-05-08T20:36:45.988+07:00  INFO 19644 --- [bidmart-wallet] [ntainer#1-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : wallet-service: partitions assigned: [auction.settled-0]
+</pre>
+<button class="clipboard-copy-btn" aria-label="Copy to clipboard" data-copy-element-id="root-0-test-stdout-createHold_returns201()">Copy</button>
+</span>
+</div>
+</div>
+</div>
+</div>
+<div id="footer">
+<p>
+<div>
+<label class="hidden" id="label-for-line-wrapping-toggle" for="line-wrapping-toggle">Wrap lines
+<input id="line-wrapping-toggle" type="checkbox" autocomplete="off"/>
+</label>
+</div>Generated by 
+<a href="https://www.gradle.org">Gradle 9.3.1</a> at May 8, 2026, 8:36:49 PM</p>
+</div>
+</div>
+</body>
+</html>

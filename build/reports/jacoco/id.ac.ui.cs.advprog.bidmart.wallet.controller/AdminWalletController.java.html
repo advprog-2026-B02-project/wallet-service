@@ -42,12 +42,12 @@ public class AdminWalletController {
     }
 
     private void verifyServiceToken(String token) {
-<span class="pc bpc" id="L45" title="2 of 4 branches missed.">        if (serviceToken == null || serviceToken.isBlank()) {</span>
-<span class="nc" id="L46">            return;</span>
+<span class="fc bfc" id="L45" title="All 4 branches covered.">        if (serviceToken == null || serviceToken.isBlank()) {</span>
+<span class="fc" id="L46">            return;</span>
         }
 <span class="fc bfc" id="L48" title="All 2 branches covered.">        if (!serviceToken.equals(token)) {</span>
 <span class="fc" id="L49">            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, &quot;Invalid service token&quot;);</span>
         }
 <span class="fc" id="L51">    }</span>
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

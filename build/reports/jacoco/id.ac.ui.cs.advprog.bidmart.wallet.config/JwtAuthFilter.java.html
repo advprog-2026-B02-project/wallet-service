@@ -26,24 +26,24 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
 <span class="fc" id="L27">        String authHeader = request.getHeader(&quot;Authorization&quot;);</span>
 
-<span class="pc bpc" id="L29" title="3 of 4 branches missed.">        if (authHeader == null || !authHeader.startsWith(&quot;Bearer &quot;)) {</span>
+<span class="fc bfc" id="L29" title="All 4 branches covered.">        if (authHeader == null || !authHeader.startsWith(&quot;Bearer &quot;)) {</span>
 <span class="fc" id="L30">            filterChain.doFilter(request, response);</span>
 <span class="fc" id="L31">            return;</span>
         }
 
-<span class="nc" id="L34">        String token = authHeader.substring(7);</span>
-<span class="nc bnc" id="L35" title="All 2 branches missed.">        if (!jwtService.isTokenValid(token)) {</span>
-<span class="nc" id="L36">            filterChain.doFilter(request, response);</span>
-<span class="nc" id="L37">            return;</span>
+<span class="fc" id="L34">        String token = authHeader.substring(7);</span>
+<span class="fc bfc" id="L35" title="All 2 branches covered.">        if (!jwtService.isTokenValid(token)) {</span>
+<span class="fc" id="L36">            filterChain.doFilter(request, response);</span>
+<span class="fc" id="L37">            return;</span>
         }
 
-<span class="nc" id="L40">        String subject = jwtService.extractSubject(token);</span>
-<span class="nc" id="L41">        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(</span>
-<span class="nc" id="L42">                subject, null, List.of(new SimpleGrantedAuthority(&quot;ROLE_USER&quot;))</span>
+<span class="fc" id="L40">        String subject = jwtService.extractSubject(token);</span>
+<span class="fc" id="L41">        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(</span>
+<span class="fc" id="L42">                subject, null, List.of(new SimpleGrantedAuthority(&quot;ROLE_USER&quot;))</span>
         );
-<span class="nc" id="L44">        SecurityContextHolder.getContext().setAuthentication(auth);</span>
+<span class="fc" id="L44">        SecurityContextHolder.getContext().setAuthentication(auth);</span>
 
-<span class="nc" id="L46">        filterChain.doFilter(request, response);</span>
-<span class="nc" id="L47">    }</span>
+<span class="fc" id="L46">        filterChain.doFilter(request, response);</span>
+<span class="fc" id="L47">    }</span>
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>
