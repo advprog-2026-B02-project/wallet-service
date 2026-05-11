@@ -26,6 +26,10 @@ public class Wallet {
     @Column(nullable = false)
     private long heldBalance;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean frozen = false;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

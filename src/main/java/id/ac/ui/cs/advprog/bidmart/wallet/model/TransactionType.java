@@ -6,5 +6,6 @@ public enum TransactionType {
     HOLD,
     RELEASE,
     CAPTURE,
-    PAYMENT_RECEIVED
+    PAYMENT_RECEIVED,
+    WALLET_FROZEN
 }

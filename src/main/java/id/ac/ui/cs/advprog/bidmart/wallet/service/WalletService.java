@@ -20,7 +20,8 @@ public interface WalletService {
     HoldResponse captureHold(UUID holdId);
 
     AuctionSettleResponse settleAuction(UUID auctionId, List<AuctionSettleRequest.WinnerEntry> winners);
-    void releaseAllHoldsForAuction(UUID auctionId);
+    AuctionReleaseAllResponse releaseAllHoldsForAuction(UUID auctionId);
+    WalletResponse freezeWallet(UUID userId, String reason);
 
     WalletResponse getWalletByUserIdForAdmin(UUID userId);
     Page<TransactionResponse> getTransactionHistoryForAdmin(UUID userId, Pageable pageable);

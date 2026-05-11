@@ -10,5 +10,6 @@ public class WalletResponse {
     private long availableBalance;
     private long heldBalance;
     private long totalBalance;
+    private boolean frozen;
     private LocalDateTime updatedAt;
 }

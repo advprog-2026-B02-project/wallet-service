@@ -40,6 +40,7 @@ public class WalletServiceImpl implements WalletService {
             throw new IllegalArgumentException("Top-up amount must be positive");
         }
         Wallet wallet = findOrCreateWallet(userId);
+        assertWalletCanMoveFunds(wallet);
         applyBalanceChange(wallet, request.getAmount(), 0);
         walletRepository.save(wallet);
         saveTransaction(wallet, TransactionType.TOPUP, "Top-up saldo", request.getAmount(), null);
@@ -50,6 +51,7 @@ public class WalletServiceImpl implements WalletService {
     @Transactional
     public WithdrawResponse withdraw(UUID userId, WithdrawRequest request) {
         Wallet wallet = findOrCreateWallet(userId);
+        assertWalletCanMoveFunds(wallet);
         long total = request.getAmount() + WITHDRAW_FEE;
         if (wallet.getAvailableBalance() < total) {
             throw new IllegalStateException(
@@ -183,10 +185,13 @@ public class WalletServiceImpl implements WalletService {
     public AuctionSettleResponse settleAuction(UUID auctionId, List<AuctionSettleRequest.WinnerEntry> winners) {
         List<BalanceHold> activeHolds = balanceHoldRepository.findByAuctionIdAndStatus(auctionId, HoldStatus.ACTIVE);
 
-        Set<UUID> winnerIds = winners.stream()
+        List<AuctionSettleRequest.WinnerEntry> safeWinners =
+                winners == null ? List.of() : winners;
+
+        Set<UUID> winnerIds = safeWinners.stream()
                 .map(AuctionSettleRequest.WinnerEntry::getUserId)
                 .collect(Collectors.toSet());
-        Map<UUID, Long> winnerAmounts = winners.stream()
+        Map<UUID, Long> winnerAmounts = safeWinners.stream()
                 .collect(Collectors.toMap(
                         AuctionSettleRequest.WinnerEntry::getUserId,
                         AuctionSettleRequest.WinnerEntry::getCaptureAmount));
@@ -200,7 +205,10 @@ public class WalletServiceImpl implements WalletService {
 
             if (winnerIds.contains(hold.getUserId())) {
                 long captureAmount = winnerAmounts.getOrDefault(hold.getUserId(), hold.getAmount());
-                applyBalanceChange(wallet, 0, -hold.getAmount());
+                validateCaptureAmount(hold, captureAmount);
+                long refundAmount = hold.getAmount() - captureAmount;
+
+                applyBalanceChange(wallet, refundAmount, -hold.getAmount());
                 walletRepository.save(wallet);
 
                 hold.setStatus(HoldStatus.CAPTURED);
@@ -209,6 +217,10 @@ public class WalletServiceImpl implements WalletService {
 
                 WalletTransaction txn = saveTransaction(wallet, TransactionType.CAPTURE,
                         "Pembayaran lelang - pemenang", -captureAmount, auctionId);
+                if (refundAmount > 0) {
+                    saveTransaction(wallet, TransactionType.RELEASE,
+                            "Refund sisa hold setelah settlement", refundAmount, auctionId);
+                }
                 captured.add(new AuctionSettleResponse.CapturedEntry(hold.getId(), hold.getUserId(), captureAmount, txn.getId()));
             } else {
                 releaseHoldInternal(wallet, hold);
@@ -227,14 +239,36 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    public void releaseAllHoldsForAuction(UUID auctionId) {
+    public AuctionReleaseAllResponse releaseAllHoldsForAuction(UUID auctionId) {
         List<BalanceHold> activeHolds = balanceHoldRepository.findByAuctionIdAndStatus(auctionId, HoldStatus.ACTIVE);
+        List<AuctionSettleResponse.ReleasedEntry> released = new ArrayList<>();
         for (BalanceHold hold : activeHolds) {
             Wallet wallet = walletRepository.findById(hold.getWalletId())
                     .orElseThrow(() -> new IllegalStateException("Wallet not found for hold: " + hold.getId()));
             releaseHoldInternal(wallet, hold);
             walletRepository.save(wallet);
+            released.add(new AuctionSettleResponse.ReleasedEntry(hold.getId(), hold.getUserId(), hold.getAmount()));
         }
+        return AuctionReleaseAllResponse.builder()
+                .auctionId(auctionId)
+                .released(released)
+                .releasedAt(LocalDateTime.now())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public WalletResponse freezeWallet(UUID userId, String reason) {
+        Wallet wallet = findOrCreateWallet(userId);
+        if (!wallet.isFrozen()) {
+            wallet.setFrozen(true);
+            wallet.setUpdatedAt(LocalDateTime.now());
+            walletRepository.save(wallet);
+            saveTransaction(wallet, TransactionType.WALLET_FROZEN,
+                    "Wallet frozen" + (reason == null || reason.isBlank() ? "" : ": " + reason),
+                    0, null);
+        }
+        return toWalletResponse(wallet);
     }
 
     @Override
@@ -259,6 +293,7 @@ public class WalletServiceImpl implements WalletService {
                     .userId(userId)
                     .availableBalance(0)
                     .heldBalance(0)
+                    .frozen(false)
                     .createdAt(LocalDateTime.now())
                     .build();
             return walletRepository.save(w);
@@ -285,6 +320,22 @@ public class WalletServiceImpl implements WalletService {
         wallet.setUpdatedAt(LocalDateTime.now());
     }
 
+    private void assertWalletCanMoveFunds(Wallet wallet) {
+        if (wallet.isFrozen()) {
+            throw new IllegalStateException("Wallet is frozen for this user");
+        }
+    }
+
+    private void validateCaptureAmount(BalanceHold hold, long captureAmount) {
+        if (captureAmount <= 0) {
+            throw new IllegalArgumentException("Capture amount must be positive");
+        }
+        if (captureAmount > hold.getAmount()) {
+            throw new IllegalStateException(
+                    String.format("Capture amount %d exceeds hold amount %d", captureAmount, hold.getAmount()));
+        }
+    }
+
     public WalletTransaction saveTransaction(Wallet wallet, TransactionType type, String description,
                                              long amount, UUID referenceId) {
         WalletTransaction txn = WalletTransaction.builder()
@@ -305,6 +356,7 @@ public class WalletServiceImpl implements WalletService {
                 .availableBalance(wallet.getAvailableBalance())
                 .heldBalance(wallet.getHeldBalance())
                 .totalBalance(wallet.getTotalBalance())
+                .frozen(wallet.isFrozen())
                 .updatedAt(wallet.getUpdatedAt())
                 .build();
     }

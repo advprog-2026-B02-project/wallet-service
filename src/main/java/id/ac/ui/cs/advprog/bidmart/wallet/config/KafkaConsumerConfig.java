@@ -2,6 +2,7 @@ package id.ac.ui.cs.advprog.bidmart.wallet.config;
 
 import id.ac.ui.cs.advprog.bidmart.wallet.event.AuctionSettledEvent;
 import id.ac.ui.cs.advprog.bidmart.wallet.event.AuctionUnsoldEvent;
+import id.ac.ui.cs.advprog.bidmart.wallet.event.UserSuspendedEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -55,6 +56,20 @@ public class KafkaConsumerConfig {
         ConcurrentKafkaListenerContainerFactory<String, AuctionUnsoldEvent> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(auctionUnsoldConsumerFactory());
+        return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<String, UserSuspendedEvent> userSuspendedConsumerFactory() {
+        JsonDeserializer<UserSuspendedEvent> deserializer = new JsonDeserializer<>(UserSuspendedEvent.class, false);
+        return new DefaultKafkaConsumerFactory<>(baseConsumerProps(), new StringDeserializer(), deserializer);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, UserSuspendedEvent> userSuspendedListenerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, UserSuspendedEvent> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(userSuspendedConsumerFactory());
         return factory;
     }
 }

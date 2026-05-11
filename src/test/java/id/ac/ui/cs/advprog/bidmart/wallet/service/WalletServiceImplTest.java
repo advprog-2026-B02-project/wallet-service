@@ -91,6 +91,15 @@ class WalletServiceImplTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    @Test
+    void topUp_throwsWhenWalletFrozen() {
+        wallet.setFrozen(true);
+
+        assertThatThrownBy(() -> service.topUp(userId, new TopUpRequest(50_000L)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("frozen");
+    }
+
     // ── withdraw ──────────────────────────────────────────────────────────────
 
     @Test
@@ -113,6 +122,17 @@ class WalletServiceImplTest {
         assertThatThrownBy(() -> service.withdraw(userId, req))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Saldo tidak mencukupi");
+    }
+
+    @Test
+    void withdraw_throwsWhenWalletFrozen() {
+        wallet.setFrozen(true);
+        WithdrawRequest req = WithdrawRequest.builder()
+                .amount(10_000L).bankCode("BCA").accountNumber("123").accountName("Test").build();
+
+        assertThatThrownBy(() -> service.withdraw(userId, req))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("frozen");
     }
 
     // ── createHold ────────────────────────────────────────────────────────────
@@ -317,6 +337,49 @@ class WalletServiceImplTest {
         assertThat(res.getReleased()).isEmpty();
     }
 
+    @Test
+    void settleAuction_refundsUnusedWinnerHoldAmount() {
+        UUID winnerId = UUID.randomUUID();
+        Wallet winnerWallet = walletWithBalance(winnerId, 0L, 50_000L);
+        BalanceHold winnerHold = BalanceHold.builder()
+                .id(UUID.randomUUID()).walletId(winnerWallet.getId())
+                .userId(winnerId).auctionId(auctionId).amount(50_000L)
+                .status(HoldStatus.ACTIVE).createdAt(LocalDateTime.now()).build();
+
+        when(balanceHoldRepository.findByAuctionIdAndStatus(auctionId, HoldStatus.ACTIVE))
+                .thenReturn(List.of(winnerHold));
+        when(walletRepository.findById(winnerWallet.getId())).thenReturn(Optional.of(winnerWallet));
+        when(balanceHoldRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        AuctionSettleResponse res = service.settleAuction(auctionId,
+                List.of(new AuctionSettleRequest.WinnerEntry(winnerId, 40_000L)));
+
+        assertThat(res.getCaptured()).singleElement().extracting(AuctionSettleResponse.CapturedEntry::getAmount)
+                .isEqualTo(40_000L);
+        assertThat(winnerWallet.getAvailableBalance()).isEqualTo(10_000L);
+        assertThat(winnerWallet.getHeldBalance()).isZero();
+        verify(walletTransactionRepository, atLeast(2)).save(any());
+    }
+
+    @Test
+    void settleAuction_throwsWhenCaptureAmountExceedsHold() {
+        UUID winnerId = UUID.randomUUID();
+        Wallet winnerWallet = walletWithBalance(winnerId, 0L, 50_000L);
+        BalanceHold winnerHold = BalanceHold.builder()
+                .id(UUID.randomUUID()).walletId(winnerWallet.getId())
+                .userId(winnerId).auctionId(auctionId).amount(50_000L)
+                .status(HoldStatus.ACTIVE).createdAt(LocalDateTime.now()).build();
+
+        when(balanceHoldRepository.findByAuctionIdAndStatus(auctionId, HoldStatus.ACTIVE))
+                .thenReturn(List.of(winnerHold));
+        when(walletRepository.findById(winnerWallet.getId())).thenReturn(Optional.of(winnerWallet));
+
+        assertThatThrownBy(() -> service.settleAuction(auctionId,
+                List.of(new AuctionSettleRequest.WinnerEntry(winnerId, 60_000L))))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("exceeds hold");
+    }
+
     // ── releaseAllHoldsForAuction ─────────────────────────────────────────────
 
     @Test
@@ -332,12 +395,25 @@ class WalletServiceImplTest {
         when(walletRepository.findById(wallet.getId())).thenReturn(Optional.of(wallet));
         when(balanceHoldRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.releaseAllHoldsForAuction(auctionId);
+        AuctionReleaseAllResponse res = service.releaseAllHoldsForAuction(auctionId);
 
+        assertThat(res.getReleased()).hasSize(2);
         assertThat(hold1.getStatus()).isEqualTo(HoldStatus.RELEASED);
         assertThat(hold2.getStatus()).isEqualTo(HoldStatus.RELEASED);
         assertThat(wallet.getAvailableBalance()).isEqualTo(60_000L);
         assertThat(wallet.getHeldBalance()).isZero();
+    }
+
+    // ── freeze ───────────────────────────────────────────────────────────────
+
+    @Test
+    void freezeWallet_marksWalletFrozenAndWritesAuditRecord() {
+        WalletResponse res = service.freezeWallet(userId, "suspended");
+
+        assertThat(res.isFrozen()).isTrue();
+        assertThat(wallet.isFrozen()).isTrue();
+        verify(walletTransactionRepository).save(argThat(txn ->
+                txn.getType() == TransactionType.WALLET_FROZEN && txn.getAmount() == 0L));
     }
 
     // ── admin methods ─────────────────────────────────────────────────────────
