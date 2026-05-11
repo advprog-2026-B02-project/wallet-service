@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@EmbeddedKafka(partitions = 1, topics = {"auction.settled", "auction.unsold"})
+@EmbeddedKafka(partitions = 1, topics = {"auction.settled", "auction.unsold", "user.suspended"})
 class WalletControllerIntegrationTest {
 
     @Autowired MockMvc mockMvc;
@@ -53,6 +53,8 @@ class WalletControllerIntegrationTest {
                 .bidId(UUID.randomUUID()).amount(50_000L).build();
 
         mockMvc.perform(post("/internal/v1/wallet/holds")
+                        .header("X-Service-Token", serviceToken)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isCreated())
@@ -69,9 +71,55 @@ class WalletControllerIntegrationTest {
                 .bidId(UUID.randomUUID()).amount(50_000L).build();
 
         mockMvc.perform(post("/internal/v1/wallet/holds")
+                        .header("X-Service-Token", serviceToken)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void createHold_requiresInternalHeaders() throws Exception {
+        UUID userId = topUpAndGetUserId(100_000L);
+        HoldRequest req = HoldRequest.builder()
+                .userId(userId).auctionId(UUID.randomUUID())
+                .bidId(UUID.randomUUID()).amount(50_000L).build();
+
+        mockMvc.perform(post("/internal/v1/wallet/holds")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/internal/v1/wallet/holds")
+                        .header("X-Service-Token", serviceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createHold_isIdempotentForSameKeyAndPath() throws Exception {
+        UUID userId = topUpAndGetUserId(100_000L);
+        UUID idempotencyKey = UUID.randomUUID();
+        HoldRequest req = HoldRequest.builder()
+                .userId(userId).auctionId(UUID.randomUUID())
+                .bidId(UUID.randomUUID()).amount(50_000L).build();
+
+        String firstResponse = mockMvc.perform(post("/internal/v1/wallet/holds")
+                        .header("X-Service-Token", serviceToken)
+                        .header("Idempotency-Key", idempotencyKey.toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        mockMvc.perform(post("/internal/v1/wallet/holds")
+                        .header("X-Service-Token", serviceToken)
+                        .header("Idempotency-Key", idempotencyKey.toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isCreated())
+                .andExpect(content().json(firstResponse));
     }
 
     // ── internal: releaseHold ─────────────────────────────────────────────────
@@ -82,6 +130,11 @@ class WalletControllerIntegrationTest {
         HoldResponse hold = createHold(userId, 50_000L);
 
         mockMvc.perform(post("/internal/v1/wallet/holds/{id}/release", hold.getHoldId()))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/internal/v1/wallet/holds/{id}/release", hold.getHoldId())
+                        .header("X-Service-Token", serviceToken)
+                        .header("Idempotency-Key", UUID.randomUUID().toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("RELEASED"));
     }
@@ -92,7 +145,9 @@ class WalletControllerIntegrationTest {
         HoldResponse hold = createHold(userId, 50_000L);
         walletService.releaseHold(hold.getHoldId());
 
-        mockMvc.perform(post("/internal/v1/wallet/holds/{id}/release", hold.getHoldId()))
+        mockMvc.perform(post("/internal/v1/wallet/holds/{id}/release", hold.getHoldId())
+                        .header("X-Service-Token", serviceToken)
+                        .header("Idempotency-Key", UUID.randomUUID().toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("RELEASED"));
     }
@@ -104,7 +159,9 @@ class WalletControllerIntegrationTest {
         UUID userId = topUpAndGetUserId(100_000L);
         HoldResponse hold = createHold(userId, 50_000L);
 
-        mockMvc.perform(post("/internal/v1/wallet/holds/{id}/capture", hold.getHoldId()))
+        mockMvc.perform(post("/internal/v1/wallet/holds/{id}/capture", hold.getHoldId())
+                        .header("X-Service-Token", serviceToken)
+                        .header("Idempotency-Key", UUID.randomUUID().toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CAPTURED"));
     }
@@ -115,7 +172,9 @@ class WalletControllerIntegrationTest {
         HoldResponse hold = createHold(userId, 50_000L);
         walletService.captureHold(hold.getHoldId());
 
-        mockMvc.perform(post("/internal/v1/wallet/holds/{id}/capture", hold.getHoldId()))
+        mockMvc.perform(post("/internal/v1/wallet/holds/{id}/capture", hold.getHoldId())
+                        .header("X-Service-Token", serviceToken)
+                        .header("Idempotency-Key", UUID.randomUUID().toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CAPTURED"));
     }
@@ -132,6 +191,8 @@ class WalletControllerIntegrationTest {
                 List.of(new AuctionSettleRequest.WinnerEntry(userId, 50_000L)));
 
         mockMvc.perform(post("/internal/v1/wallet/auctions/{id}/settle", auctionId)
+                        .header("X-Service-Token", serviceToken)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
@@ -148,6 +209,8 @@ class WalletControllerIntegrationTest {
                 List.of(new AuctionSettleRequest.WinnerEntry(userId, 50_000L)));
 
         mockMvc.perform(post("/internal/v1/wallet/auctions/{id}/settle", auctionId)
+                        .header("X-Service-Token", serviceToken)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
@@ -163,8 +226,11 @@ class WalletControllerIntegrationTest {
         UUID auctionId = UUID.randomUUID();
         createHoldForAuction(userId, auctionId, 50_000L);
 
-        mockMvc.perform(post("/internal/v1/wallet/auctions/{id}/release-all", auctionId))
-                .andExpect(status().isOk());
+        mockMvc.perform(post("/internal/v1/wallet/auctions/{id}/release-all", auctionId)
+                        .header("X-Service-Token", serviceToken)
+                        .header("Idempotency-Key", UUID.randomUUID().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.released", hasSize(1)));
     }
 
     // ── admin ─────────────────────────────────────────────────────────────────
