@@ -29,7 +29,7 @@ spring:
         spring.json.trusted.packages: "id.ac.ui.cs.advprog.bidmart.wallet.event"
 
 server:
-  port: ${SERVER_PORT:8082}
+  port: ${SERVER_PORT:8084}
 
 jwt:
   secret: ${JWT_SECRET:your-256-bit-secret-key-change-in-production-please}
