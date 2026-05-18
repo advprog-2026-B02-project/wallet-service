@@ -1,5 +1,9 @@
 name: Wallet Service CI/CD
 
+env:
+  DOCKERHUB_USERNAME: mugmold
+  DOCKER_IMAGE: bidmart-wallet-service
+
 on:
   push:
     branches: [ master, main, staging ]
@@ -51,7 +55,7 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push production image
@@ -61,7 +65,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/bidmart-wallet-service:latest
+          tags: ${{ env.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:latest
 
       - name: Build and push staging image
         if: github.ref == 'refs/heads/staging'
@@ -70,4 +74,4 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/bidmart-wallet-service:staging
+          tags: ${{ env.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE }}:staging
