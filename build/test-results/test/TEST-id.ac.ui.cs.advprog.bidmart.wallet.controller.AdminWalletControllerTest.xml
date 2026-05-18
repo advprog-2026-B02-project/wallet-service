@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="id.ac.ui.cs.advprog.bidmart.wallet.controller.AdminWalletControllerTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-05-08T13:36:12.714Z" hostname="NAIL" time="0.392">
-  <properties/>
-  <testcase name="getWallet_allowsRequestWhenServiceTokenIsNull()" classname="id.ac.ui.cs.advprog.bidmart.wallet.controller.AdminWalletControllerTest" time="0.33"/>
-  <testcase name="getTransactions_allowsRequestWhenServiceTokenIsBlank()" classname="id.ac.ui.cs.advprog.bidmart.wallet.controller.AdminWalletControllerTest" time="0.058"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

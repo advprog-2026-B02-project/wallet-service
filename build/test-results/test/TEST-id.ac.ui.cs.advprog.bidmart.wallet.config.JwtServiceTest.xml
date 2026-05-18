@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="id.ac.ui.cs.advprog.bidmart.wallet.config.JwtServiceTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-05-08T13:36:09.675Z" hostname="NAIL" time="3.025">
-  <properties/>
-  <testcase name="isTokenValid_returnsFalseForMalformedToken()" classname="id.ac.ui.cs.advprog.bidmart.wallet.config.JwtServiceTest" time="2.351"/>
-  <testcase name="isTokenValid_returnsTrueForValidToken()" classname="id.ac.ui.cs.advprog.bidmart.wallet.config.JwtServiceTest" time="0.657"/>
-  <testcase name="extractSubject_returnsSubjectFromValidToken()" classname="id.ac.ui.cs.advprog.bidmart.wallet.config.JwtServiceTest" time="0.007"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>
