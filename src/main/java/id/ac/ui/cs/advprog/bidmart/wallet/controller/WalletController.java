@@ -81,6 +81,12 @@ public class WalletController {
             throw new IllegalArgumentException("User is not authenticated.");
         }
         String subject = principal.getName().trim();
+        try {
+            return UUID.fromString(subject);
+        } catch (IllegalArgumentException ignored) {
+            // Keep compatibility with older tokens that used a non-UUID subject.
+        }
+
         String source = "wallet-user-" + subject;
         return UUID.nameUUIDFromBytes(source.getBytes(StandardCharsets.UTF_8));
     }

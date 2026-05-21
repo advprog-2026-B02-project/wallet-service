@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 public class WalletServiceImpl implements WalletService {
 
     private static final long WITHDRAW_FEE = 5000L;
+    private static final String LEGACY_WALLET_USER_PREFIX = "wallet-user-";
 
     private final WalletRepository walletRepository;
     private final BalanceHoldRepository balanceHoldRepository;
@@ -30,11 +32,13 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional
     public WalletResponse getWallet(UUID userId) {
         return toWalletResponse(findOrCreateWallet(userId));
     }
 
     @Override
+    @Transactional
     public WalletResponse topUp(UUID userId, TopUpRequest request) {
         if (request.getAmount() <= 0) {
             throw new IllegalArgumentException("Top-up amount must be positive");
@@ -75,6 +79,7 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional
     public Page<TransactionResponse> getTransactionHistory(UUID userId, Pageable pageable) {
         Wallet wallet = findOrCreateWallet(userId);
         return walletTransactionRepository
@@ -83,6 +88,7 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional
     public TransactionResponse getTransaction(UUID userId, UUID transactionId) {
         Wallet wallet = findOrCreateWallet(userId);
         WalletTransaction txn = walletTransactionRepository.findById(transactionId)
@@ -114,9 +120,12 @@ public class WalletServiceImpl implements WalletService {
             throw new IllegalArgumentException("Hold amount must be positive");
         }
         Wallet wallet = findOrCreateWallet(request.getUserId());
-        balanceHoldRepository.findByUserIdAndAuctionIdAndStatus(
-                        request.getUserId(), request.getAuctionId(), HoldStatus.ACTIVE)
-                .ifPresent(existing -> releaseHoldInternal(wallet, existing));
+        Optional<BalanceHold> existingHold = balanceHoldRepository.findByUserIdAndAuctionIdAndStatus(
+                request.getUserId(), request.getAuctionId(), HoldStatus.ACTIVE);
+
+        if (existingHold.isPresent()) {
+            return replaceExistingHold(wallet, existingHold.get(), request);
+        }
 
         if (wallet.getAvailableBalance() < request.getAmount()) {
             throw new IllegalStateException(
@@ -137,6 +146,35 @@ public class WalletServiceImpl implements WalletService {
                 .build();
         balanceHoldRepository.save(hold);
         saveTransaction(wallet, TransactionType.HOLD, "Hold balance for bid", -request.getAmount(), request.getAuctionId());
+        return toHoldResponse(hold);
+    }
+
+    private HoldResponse replaceExistingHold(Wallet wallet, BalanceHold hold, HoldRequest request) {
+        long newAmount = request.getAmount();
+        long currentAmount = hold.getAmount();
+        long delta = newAmount - currentAmount;
+
+        if (delta > 0) {
+            if (wallet.getAvailableBalance() < delta) {
+                throw new IllegalStateException(
+                        String.format("Saldo tidak mencukupi. Tersedia: %d, Dibutuhkan: %d",
+                                wallet.getAvailableBalance(), delta));
+            }
+            applyBalanceChange(wallet, -delta, delta);
+            saveTransaction(wallet, TransactionType.HOLD, "Increase hold balance for bid", -delta, request.getAuctionId());
+        } else if (delta < 0) {
+            long releasedAmount = Math.abs(delta);
+            applyBalanceChange(wallet, releasedAmount, -releasedAmount);
+            saveTransaction(wallet, TransactionType.RELEASE, "Decrease hold balance for bid", releasedAmount, request.getAuctionId());
+        }
+
+        hold.setWalletId(wallet.getId());
+        hold.setUserId(request.getUserId());
+        hold.setBidId(request.getBidId());
+        hold.setAmount(newAmount);
+        hold.setUpdatedAt(LocalDateTime.now());
+        walletRepository.save(wallet);
+        balanceHoldRepository.save(hold);
         return toHoldResponse(hold);
     }
 
@@ -287,8 +325,24 @@ public class WalletServiceImpl implements WalletService {
                 .map(this::toTransactionResponse);
     }
 
+    @Transactional
     public Wallet findOrCreateWallet(UUID userId) {
-        return walletRepository.findByUserId(userId).orElseGet(() -> {
+        UUID legacyUserId = legacyWalletUserId(userId);
+        Optional<Wallet> existingWallet = walletRepository.findByUserIdForUpdate(userId);
+        Optional<Wallet> legacyWallet = walletRepository.findByUserIdForUpdate(legacyUserId);
+
+        if (existingWallet.isPresent()) {
+            return legacyWallet
+                    .filter(legacy -> !legacy.getId().equals(existingWallet.get().getId()))
+                    .map(legacy -> mergeLegacyWallet(existingWallet.get(), legacy, userId))
+                    .orElse(existingWallet.get());
+        }
+
+        if (legacyWallet.isPresent()) {
+            return claimLegacyWallet(legacyWallet.get(), userId);
+        }
+
+        return walletRepository.findByUserIdForUpdate(userId).orElseGet(() -> {
             Wallet w = Wallet.builder()
                     .userId(userId)
                     .availableBalance(0)
@@ -298,6 +352,48 @@ public class WalletServiceImpl implements WalletService {
                     .build();
             return walletRepository.save(w);
         });
+    }
+
+    private Wallet claimLegacyWallet(Wallet wallet, UUID userId) {
+        wallet.setUserId(userId);
+        wallet.setUpdatedAt(LocalDateTime.now());
+        rewriteHoldOwnership(wallet.getId(), userId);
+        return walletRepository.save(wallet);
+    }
+
+    private Wallet mergeLegacyWallet(Wallet target, Wallet legacy, UUID userId) {
+        applyBalanceChange(target, legacy.getAvailableBalance(), legacy.getHeldBalance());
+        target.setFrozen(target.isFrozen() || legacy.isFrozen());
+        Wallet savedTarget = walletRepository.save(target);
+
+        List<BalanceHold> legacyHolds = balanceHoldRepository.findAllByWalletId(legacy.getId());
+        legacyHolds.forEach(hold -> {
+            hold.setWalletId(savedTarget.getId());
+            hold.setUserId(userId);
+            hold.setUpdatedAt(LocalDateTime.now());
+        });
+        balanceHoldRepository.saveAll(legacyHolds);
+
+        List<WalletTransaction> legacyTransactions = walletTransactionRepository.findAllByWalletId(legacy.getId());
+        legacyTransactions.forEach(transaction -> transaction.setWalletId(savedTarget.getId()));
+        walletTransactionRepository.saveAll(legacyTransactions);
+
+        walletRepository.delete(legacy);
+        return savedTarget;
+    }
+
+    private void rewriteHoldOwnership(UUID walletId, UUID userId) {
+        List<BalanceHold> holds = balanceHoldRepository.findAllByWalletId(walletId);
+        holds.forEach(hold -> {
+            hold.setUserId(userId);
+            hold.setUpdatedAt(LocalDateTime.now());
+        });
+        balanceHoldRepository.saveAll(holds);
+    }
+
+    private UUID legacyWalletUserId(UUID userId) {
+        String source = LEGACY_WALLET_USER_PREFIX + userId;
+        return UUID.nameUUIDFromBytes(source.getBytes(StandardCharsets.UTF_8));
     }
 
     private void releaseHoldInternal(Wallet wallet, BalanceHold hold) {
