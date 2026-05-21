@@ -51,6 +51,7 @@ class WalletServiceImplTest {
                 .build();
 
         when(walletRepository.findByUserId(userId)).thenReturn(Optional.of(wallet));
+        when(walletRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(wallet));
         when(walletRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(walletTransactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }

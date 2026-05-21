@@ -150,32 +150,30 @@ public class WalletServiceImpl implements WalletService {
     }
 
     private HoldResponse replaceExistingHold(Wallet wallet, BalanceHold hold, HoldRequest request) {
-        long newAmount = request.getAmount();
-        long currentAmount = hold.getAmount();
-        long delta = newAmount - currentAmount;
-
-        if (delta > 0) {
-            if (wallet.getAvailableBalance() < delta) {
-                throw new IllegalStateException(
-                        String.format("Saldo tidak mencukupi. Tersedia: %d, Dibutuhkan: %d",
-                                wallet.getAvailableBalance(), delta));
-            }
-            applyBalanceChange(wallet, -delta, delta);
-            saveTransaction(wallet, TransactionType.HOLD, "Increase hold balance for bid", -delta, request.getAuctionId());
-        } else if (delta < 0) {
-            long releasedAmount = Math.abs(delta);
-            applyBalanceChange(wallet, releasedAmount, -releasedAmount);
-            saveTransaction(wallet, TransactionType.RELEASE, "Decrease hold balance for bid", releasedAmount, request.getAuctionId());
+        long availableAfterRelease = wallet.getAvailableBalance() + hold.getAmount();
+        if (availableAfterRelease < request.getAmount()) {
+            throw new IllegalStateException(
+                    String.format("Saldo tidak mencukupi. Tersedia: %d, Dibutuhkan: %d",
+                            availableAfterRelease, request.getAmount()));
         }
 
-        hold.setWalletId(wallet.getId());
-        hold.setUserId(request.getUserId());
-        hold.setBidId(request.getBidId());
-        hold.setAmount(newAmount);
-        hold.setUpdatedAt(LocalDateTime.now());
+        releaseHoldInternal(wallet, hold);
+
+        BalanceHold replacement = BalanceHold.builder()
+                .walletId(wallet.getId())
+                .userId(request.getUserId())
+                .auctionId(request.getAuctionId())
+                .bidId(request.getBidId())
+                .amount(request.getAmount())
+                .status(HoldStatus.ACTIVE)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        applyBalanceChange(wallet, -request.getAmount(), request.getAmount());
         walletRepository.save(wallet);
-        balanceHoldRepository.save(hold);
-        return toHoldResponse(hold);
+        BalanceHold savedReplacement = balanceHoldRepository.save(replacement);
+        saveTransaction(wallet, TransactionType.HOLD, "Hold balance for bid", -request.getAmount(), request.getAuctionId());
+        return toHoldResponse(savedReplacement);
     }
 
     @Override
