@@ -218,7 +218,7 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    public AuctionSettleResponse settleAuction(UUID auctionId, List<AuctionSettleRequest.WinnerEntry> winners) {
+    public AuctionSettleResponse settleAuction(UUID auctionId, UUID sellerId, List<AuctionSettleRequest.WinnerEntry> winners) {
         List<BalanceHold> activeHolds = balanceHoldRepository.findByAuctionIdAndStatus(auctionId, HoldStatus.ACTIVE);
 
         List<AuctionSettleRequest.WinnerEntry> safeWinners =
@@ -257,6 +257,24 @@ public class WalletServiceImpl implements WalletService {
                     saveTransaction(wallet, TransactionType.RELEASE,
                             "Refund sisa hold setelah settlement", refundAmount, auctionId);
                 }
+
+                if (sellerId != null) {
+                    Wallet sellerWallet = walletRepository.findByUserId(sellerId)
+                            .orElseGet(() -> {
+                                Wallet w = new Wallet();
+                                w.setUserId(sellerId);
+                                w.setAvailableBalance(0L);
+                                w.setHeldBalance(0L);
+                                w.setCreatedAt(LocalDateTime.now());
+                                w.setUpdatedAt(LocalDateTime.now());
+                                return walletRepository.save(w);
+                            });
+                    applyBalanceChange(sellerWallet, captureAmount, 0L);
+                    walletRepository.save(sellerWallet);
+                    saveTransaction(sellerWallet, TransactionType.PAYMENT_RECEIVED,
+                            "Penerimaan dana lelang", captureAmount, auctionId);
+                }
+
                 captured.add(new AuctionSettleResponse.CapturedEntry(hold.getId(), hold.getUserId(), captureAmount, txn.getId()));
             } else {
                 releaseHoldInternal(wallet, hold);

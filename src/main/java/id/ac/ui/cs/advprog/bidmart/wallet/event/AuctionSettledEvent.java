@@ -9,6 +9,8 @@ import java.util.UUID;
 public class AuctionSettledEvent {
     private UUID eventId;
     private UUID auctionId;
+    private UUID listingId;
+    private UUID sellerId;
     private String auctionType;
     private List<WinnerEntry> winners;
     private LocalDateTime occurredAt;

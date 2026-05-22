@@ -315,7 +315,7 @@ class WalletServiceImplTest {
         when(walletRepository.findById(loserWallet.getId())).thenReturn(Optional.of(loserWallet));
         when(balanceHoldRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        AuctionSettleResponse res = service.settleAuction(auctionId,
+        AuctionSettleResponse res = service.settleAuction(auctionId, null,
                 List.of(new AuctionSettleRequest.WinnerEntry(winnerId, 50_000L)));
 
         assertThat(res.getCaptured()).hasSize(1);
@@ -331,7 +331,7 @@ class WalletServiceImplTest {
         when(balanceHoldRepository.findByAuctionIdAndStatus(auctionId, HoldStatus.ACTIVE))
                 .thenReturn(Collections.emptyList());
 
-        AuctionSettleResponse res = service.settleAuction(auctionId,
+        AuctionSettleResponse res = service.settleAuction(auctionId, null,
                 List.of(new AuctionSettleRequest.WinnerEntry(userId, 50_000L)));
 
         assertThat(res.getCaptured()).isEmpty();
@@ -352,7 +352,7 @@ class WalletServiceImplTest {
         when(walletRepository.findById(winnerWallet.getId())).thenReturn(Optional.of(winnerWallet));
         when(balanceHoldRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        AuctionSettleResponse res = service.settleAuction(auctionId,
+        AuctionSettleResponse res = service.settleAuction(auctionId, null,
                 List.of(new AuctionSettleRequest.WinnerEntry(winnerId, 40_000L)));
 
         assertThat(res.getCaptured()).singleElement().extracting(AuctionSettleResponse.CapturedEntry::getAmount)
@@ -375,7 +375,7 @@ class WalletServiceImplTest {
                 .thenReturn(List.of(winnerHold));
         when(walletRepository.findById(winnerWallet.getId())).thenReturn(Optional.of(winnerWallet));
 
-        assertThatThrownBy(() -> service.settleAuction(auctionId,
+        assertThatThrownBy(() -> service.settleAuction(auctionId, null,
                 List.of(new AuctionSettleRequest.WinnerEntry(winnerId, 60_000L))))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("exceeds hold");

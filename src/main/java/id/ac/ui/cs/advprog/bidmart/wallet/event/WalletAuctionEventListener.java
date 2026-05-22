@@ -40,7 +40,7 @@ public class WalletAuctionEventListener {
                 .map(w -> new AuctionSettleRequest.WinnerEntry(w.getUserId(), w.getAmount()))
                 .toList();
 
-        walletService.settleAuction(event.getAuctionId(), winnerEntries);
+        walletService.settleAuction(event.getAuctionId(), event.getSellerId(), winnerEntries);
     }
 
     @KafkaListener(

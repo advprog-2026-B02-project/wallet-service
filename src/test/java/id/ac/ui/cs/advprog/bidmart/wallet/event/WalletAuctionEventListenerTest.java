@@ -68,7 +68,7 @@ class WalletAuctionEventListenerTest {
 
         listener.onAuctionSettled(event);
 
-        verify(walletService).settleAuction(org.mockito.ArgumentMatchers.eq(auctionId), winnersCaptor.capture());
+        verify(walletService).settleAuction(org.mockito.ArgumentMatchers.eq(auctionId), org.mockito.ArgumentMatchers.isNull(), winnersCaptor.capture());
         assertThat(winnersCaptor.getValue()).hasSize(1);
         assertThat(winnersCaptor.getValue().getFirst().getUserId()).isEqualTo(userId);
         assertThat(winnersCaptor.getValue().getFirst().getCaptureAmount()).isEqualTo(75_000L);

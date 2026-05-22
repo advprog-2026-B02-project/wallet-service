@@ -19,7 +19,7 @@ public interface WalletService {
     HoldResponse releaseHold(UUID holdId);
     HoldResponse captureHold(UUID holdId);
 
-    AuctionSettleResponse settleAuction(UUID auctionId, List<AuctionSettleRequest.WinnerEntry> winners);
+    AuctionSettleResponse settleAuction(UUID auctionId, UUID sellerId, List<AuctionSettleRequest.WinnerEntry> winners);
     AuctionReleaseAllResponse releaseAllHoldsForAuction(UUID auctionId);
     WalletResponse freezeWallet(UUID userId, String reason);
 

@@ -47,11 +47,12 @@ public class InternalWalletController {
     @PostMapping("/auctions/{auctionId}/settle")
     public ResponseEntity<String> settleAuction(
             @PathVariable UUID auctionId,
+            @RequestParam(required = false) UUID sellerId,
             @Valid @RequestBody AuctionSettleRequest request,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             HttpServletRequest servletRequest) {
         return idempotencyService.execute(idempotencyKey, servletRequest.getRequestURI(),
-                () -> ResponseEntity.ok(walletService.settleAuction(auctionId, request.getWinners())));
+                () -> ResponseEntity.ok(walletService.settleAuction(auctionId, sellerId, request.getWinners())));
     }
 
     @PostMapping("/auctions/{auctionId}/release-all")
