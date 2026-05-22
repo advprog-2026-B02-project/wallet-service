@@ -66,5 +66,42 @@ services:
     ports:
       - "8084:8084"
 
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: wallet-prometheus
+    profiles:
+      - monitoring
+    depends_on:
+      - wallet-service
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - wallet-prometheus-data:/prometheus
+
+  grafana:
+    image: grafana/grafana-oss:11.1.4
+    container_name: wallet-grafana
+    profiles:
+      - monitoring
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3001:3000"
+    volumes:
+      - wallet-grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
 volumes:
   wallet-db-data:
+  wallet-prometheus-data:
+  wallet-grafana-data:

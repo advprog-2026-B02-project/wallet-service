@@ -14,4 +14,5 @@ public interface BalanceHoldRepository extends JpaRepository<BalanceHold, UUID> 
     List<BalanceHold> findByAuctionIdAndStatus(UUID auctionId, HoldStatus status);
     Optional<BalanceHold> findByUserIdAndAuctionIdAndStatus(UUID userId, UUID auctionId, HoldStatus status);
     List<BalanceHold> findAllByWalletId(UUID walletId);
+    long countByStatus(HoldStatus status);
 }

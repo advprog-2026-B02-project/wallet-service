@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -74,6 +75,121 @@ class WalletServiceImplTest {
 
         assertThat(res.getAvailableBalance()).isZero();
         verify(walletRepository).save(any(Wallet.class));
+    }
+
+    @Test
+    void findOrCreateWallet_ignoresLegacyRecordWhenItIsSameWallet() {
+        UUID legacyUserId = legacyUserId(userId);
+        when(walletRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(wallet));
+        when(walletRepository.findByUserIdForUpdate(legacyUserId)).thenReturn(Optional.of(wallet));
+
+        Wallet result = service.findOrCreateWallet(userId);
+
+        assertThat(result).isSameAs(wallet);
+        verify(walletRepository, never()).delete(any());
+    }
+
+    @Test
+    void findOrCreateWallet_claimsLegacyWalletAndRewritesHoldOwnership() {
+        UUID ownerId = UUID.randomUUID();
+        UUID legacyUserId = legacyUserId(ownerId);
+        Wallet legacyWallet = walletWithBalance(legacyUserId, 75_000L, 25_000L);
+        BalanceHold legacyHold = BalanceHold.builder()
+                .id(UUID.randomUUID())
+                .walletId(legacyWallet.getId())
+                .userId(legacyUserId)
+                .auctionId(auctionId)
+                .amount(25_000L)
+                .status(HoldStatus.ACTIVE)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(walletRepository.findByUserIdForUpdate(ownerId)).thenReturn(Optional.empty());
+        when(walletRepository.findByUserIdForUpdate(legacyUserId)).thenReturn(Optional.of(legacyWallet));
+        when(balanceHoldRepository.findAllByWalletId(legacyWallet.getId())).thenReturn(List.of(legacyHold));
+
+        Wallet result = service.findOrCreateWallet(ownerId);
+
+        assertThat(result).isSameAs(legacyWallet);
+        assertThat(legacyWallet.getUserId()).isEqualTo(ownerId);
+        assertThat(legacyHold.getUserId()).isEqualTo(ownerId);
+        assertThat(legacyHold.getUpdatedAt()).isNotNull();
+        verify(balanceHoldRepository).saveAll(List.of(legacyHold));
+        verify(walletRepository).save(legacyWallet);
+    }
+
+    @Test
+    void findOrCreateWallet_mergesSeparateLegacyWalletAndTransfersRecords() {
+        UUID ownerId = UUID.randomUUID();
+        UUID legacyUserId = legacyUserId(ownerId);
+        Wallet target = walletWithBalance(ownerId, 10_000L, 5_000L);
+        Wallet legacy = walletWithBalance(legacyUserId, 15_000L, 7_000L);
+        legacy.setFrozen(true);
+        BalanceHold legacyHold = BalanceHold.builder()
+                .id(UUID.randomUUID())
+                .walletId(legacy.getId())
+                .userId(legacyUserId)
+                .auctionId(auctionId)
+                .amount(7_000L)
+                .status(HoldStatus.ACTIVE)
+                .createdAt(LocalDateTime.now())
+                .build();
+        WalletTransaction legacyTransaction = WalletTransaction.builder()
+                .id(UUID.randomUUID())
+                .walletId(legacy.getId())
+                .type(TransactionType.HOLD)
+                .amount(-7_000L)
+                .balanceAfter(15_000L)
+                .description("legacy")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(walletRepository.findByUserIdForUpdate(ownerId)).thenReturn(Optional.of(target));
+        when(walletRepository.findByUserIdForUpdate(legacyUserId)).thenReturn(Optional.of(legacy));
+        when(balanceHoldRepository.findAllByWalletId(legacy.getId())).thenReturn(List.of(legacyHold));
+        when(walletTransactionRepository.findAllByWalletId(legacy.getId())).thenReturn(List.of(legacyTransaction));
+
+        Wallet result = service.findOrCreateWallet(ownerId);
+
+        assertThat(result).isSameAs(target);
+        assertThat(target.getAvailableBalance()).isEqualTo(25_000L);
+        assertThat(target.getHeldBalance()).isEqualTo(12_000L);
+        assertThat(target.isFrozen()).isTrue();
+        assertThat(legacyHold.getWalletId()).isEqualTo(target.getId());
+        assertThat(legacyHold.getUserId()).isEqualTo(ownerId);
+        assertThat(legacyTransaction.getWalletId()).isEqualTo(target.getId());
+        verify(balanceHoldRepository).saveAll(List.of(legacyHold));
+        verify(walletTransactionRepository).saveAll(List.of(legacyTransaction));
+        verify(walletRepository).delete(legacy);
+    }
+
+    @Test
+    void findOrCreateWallet_mergesLegacyWalletWithoutFreezingWhenBothWalletsAreActive() {
+        Wallet result = mergeLegacyWalletWithFrozenState(false, false);
+
+        assertThat(result.isFrozen()).isFalse();
+    }
+
+    @Test
+    void findOrCreateWallet_keepsTargetFrozenWhenMergingLegacyWallet() {
+        Wallet result = mergeLegacyWalletWithFrozenState(true, false);
+
+        assertThat(result.isFrozen()).isTrue();
+    }
+
+    @Test
+    void findOrCreateWallet_throwsWhenLegacyMergeWouldMakeAvailableBalanceNegative() {
+        UUID ownerId = UUID.randomUUID();
+        UUID legacyUserId = legacyUserId(ownerId);
+        Wallet target = walletWithBalance(ownerId, 0L, 0L);
+        Wallet legacy = walletWithBalance(legacyUserId, -1L, 0L);
+
+        when(walletRepository.findByUserIdForUpdate(ownerId)).thenReturn(Optional.of(target));
+        when(walletRepository.findByUserIdForUpdate(legacyUserId)).thenReturn(Optional.of(legacy));
+
+        assertThatThrownBy(() -> service.findOrCreateWallet(ownerId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Saldo tidak boleh negatif");
     }
 
     // ── topUp ─────────────────────────────────────────────────────────────────
@@ -136,6 +252,88 @@ class WalletServiceImplTest {
                 .hasMessageContaining("frozen");
     }
 
+    // ── transaction history/detail ────────────────────────────────────────────
+
+    @Test
+    void getTransactionHistory_returnsMappedPageForCurrentUser() {
+        WalletTransaction txn = WalletTransaction.builder()
+                .id(UUID.randomUUID()).walletId(wallet.getId())
+                .type(TransactionType.TOPUP).amount(50_000L).balanceAfter(150_000L)
+                .description("Top-up saldo").referenceId(auctionId).createdAt(LocalDateTime.now()).build();
+
+        when(walletTransactionRepository.findByWalletIdOrderByCreatedAtDesc(wallet.getId(), Pageable.unpaged()))
+                .thenReturn(new PageImpl<>(List.of(txn)));
+
+        Page<TransactionResponse> page = service.getTransactionHistory(userId, Pageable.unpaged());
+
+        assertThat(page.getContent()).singleElement()
+                .satisfies(response -> {
+                    assertThat(response.getId()).isEqualTo(txn.getId());
+                    assertThat(response.getType()).isEqualTo("TOPUP");
+                    assertThat(response.getReferenceId()).isEqualTo(auctionId);
+                });
+    }
+
+    @Test
+    void getTransaction_returnsOwnedTransaction() {
+        UUID transactionId = UUID.randomUUID();
+        WalletTransaction txn = WalletTransaction.builder()
+                .id(transactionId).walletId(wallet.getId())
+                .type(TransactionType.WITHDRAW).amount(-15_000L).balanceAfter(85_000L)
+                .description("withdraw").createdAt(LocalDateTime.now()).build();
+        when(walletTransactionRepository.findById(transactionId)).thenReturn(Optional.of(txn));
+
+        TransactionResponse response = service.getTransaction(userId, transactionId);
+
+        assertThat(response.getId()).isEqualTo(transactionId);
+        assertThat(response.getType()).isEqualTo("WITHDRAW");
+        assertThat(response.getBalanceAfter()).isEqualTo(85_000L);
+    }
+
+    @Test
+    void getTransaction_throwsIfTransactionDoesNotExist() {
+        UUID transactionId = UUID.randomUUID();
+        when(walletTransactionRepository.findById(transactionId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getTransaction(userId, transactionId))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Transaction not found");
+    }
+
+    @Test
+    void getTransaction_throwsIfTransactionBelongsToAnotherWallet() {
+        UUID transactionId = UUID.randomUUID();
+        WalletTransaction txn = WalletTransaction.builder()
+                .id(transactionId).walletId(UUID.randomUUID())
+                .type(TransactionType.TOPUP).amount(10_000L).balanceAfter(10_000L)
+                .description("other wallet").createdAt(LocalDateTime.now()).build();
+        when(walletTransactionRepository.findById(transactionId)).thenReturn(Optional.of(txn));
+
+        assertThatThrownBy(() -> service.getTransaction(userId, transactionId))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Transaction not found");
+    }
+
+    @Test
+    void resetWallet_releasesActiveHoldsAndIgnoresInactiveHolds() {
+        wallet.setAvailableBalance(40_000L);
+        wallet.setHeldBalance(60_000L);
+        BalanceHold active = activeHold(UUID.randomUUID(), 60_000L);
+        BalanceHold released = activeHold(UUID.randomUUID(), 10_000L);
+        released.setStatus(HoldStatus.RELEASED);
+        when(balanceHoldRepository.findAllByWalletId(wallet.getId())).thenReturn(List.of(active, released));
+        when(balanceHoldRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        WalletResponse response = service.resetWallet(userId);
+
+        assertThat(active.getStatus()).isEqualTo(HoldStatus.RELEASED);
+        assertThat(released.getStatus()).isEqualTo(HoldStatus.RELEASED);
+        assertThat(response.getAvailableBalance()).isZero();
+        assertThat(response.getHeldBalance()).isZero();
+        assertThat(wallet.getAvailableBalance()).isZero();
+        assertThat(wallet.getHeldBalance()).isZero();
+    }
+
     // ── createHold ────────────────────────────────────────────────────────────
 
     @Test
@@ -186,6 +384,24 @@ class WalletServiceImplTest {
 
         assertThat(existing.getStatus()).isEqualTo(HoldStatus.RELEASED);
         assertThat(wallet.getHeldBalance()).isEqualTo(30_000L);
+    }
+
+    @Test
+    void createHold_throwsWhenReplacingHoldWouldExceedAvailableAfterRelease() {
+        wallet.setAvailableBalance(5_000L);
+        wallet.setHeldBalance(20_000L);
+        BalanceHold existing = BalanceHold.builder()
+                .id(UUID.randomUUID()).walletId(wallet.getId()).userId(userId)
+                .auctionId(auctionId).amount(20_000L).status(HoldStatus.ACTIVE)
+                .createdAt(LocalDateTime.now()).build();
+
+        when(balanceHoldRepository.findByUserIdAndAuctionIdAndStatus(userId, auctionId, HoldStatus.ACTIVE))
+                .thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> service.createHold(HoldRequest.builder()
+                .userId(userId).auctionId(auctionId).bidId(bidId).amount(30_000L).build()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Saldo tidak mencukupi");
     }
 
     @Test
@@ -243,6 +459,28 @@ class WalletServiceImplTest {
                 .hasMessageContaining("capture");
     }
 
+    @Test
+    void releaseHold_throwsIfHoldDoesNotExist() {
+        UUID holdId = UUID.randomUUID();
+        when(balanceHoldRepository.findById(holdId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.releaseHold(holdId))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Hold not found");
+    }
+
+    @Test
+    void releaseHold_throwsIfWalletDoesNotExist() {
+        UUID holdId = UUID.randomUUID();
+        BalanceHold hold = activeHold(holdId, 30_000L);
+        when(balanceHoldRepository.findById(holdId)).thenReturn(Optional.of(hold));
+        when(walletRepository.findById(wallet.getId())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.releaseHold(holdId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Wallet not found");
+    }
+
     // ── captureHold ───────────────────────────────────────────────────────────
 
     @Test
@@ -288,6 +526,42 @@ class WalletServiceImplTest {
         assertThatThrownBy(() -> service.captureHold(holdId))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("release");
+    }
+
+    @Test
+    void captureHold_throwsIfHoldDoesNotExist() {
+        UUID holdId = UUID.randomUUID();
+        when(balanceHoldRepository.findById(holdId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.captureHold(holdId))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Hold not found");
+    }
+
+    @Test
+    void captureHold_throwsIfWalletDoesNotExist() {
+        UUID holdId = UUID.randomUUID();
+        BalanceHold hold = activeHold(holdId, 30_000L);
+        when(balanceHoldRepository.findById(holdId)).thenReturn(Optional.of(hold));
+        when(walletRepository.findById(wallet.getId())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.captureHold(holdId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Wallet not found");
+    }
+
+    @Test
+    void captureHold_throwsIfHeldBalanceWouldBecomeNegative() {
+        wallet.setAvailableBalance(90_000L);
+        wallet.setHeldBalance(10_000L);
+        UUID holdId = UUID.randomUUID();
+        BalanceHold hold = activeHold(holdId, 30_000L);
+        when(balanceHoldRepository.findById(holdId)).thenReturn(Optional.of(hold));
+        when(walletRepository.findById(wallet.getId())).thenReturn(Optional.of(wallet));
+
+        assertThatThrownBy(() -> service.captureHold(holdId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Saldo tidak boleh negatif");
     }
 
     // ── settleAuction ─────────────────────────────────────────────────────────
@@ -381,6 +655,86 @@ class WalletServiceImplTest {
                 .hasMessageContaining("exceeds hold");
     }
 
+    @Test
+    void settleAuction_releasesAllHoldsWhenWinnersAreNull() {
+        UUID bidderId = UUID.randomUUID();
+        Wallet bidderWallet = walletWithBalance(bidderId, 0L, 25_000L);
+        BalanceHold hold = BalanceHold.builder()
+                .id(UUID.randomUUID()).walletId(bidderWallet.getId())
+                .userId(bidderId).auctionId(auctionId).amount(25_000L)
+                .status(HoldStatus.ACTIVE).createdAt(LocalDateTime.now()).build();
+        when(balanceHoldRepository.findByAuctionIdAndStatus(auctionId, HoldStatus.ACTIVE))
+                .thenReturn(List.of(hold));
+        when(walletRepository.findById(bidderWallet.getId())).thenReturn(Optional.of(bidderWallet));
+        when(balanceHoldRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        AuctionSettleResponse response = service.settleAuction(auctionId, null, null);
+
+        assertThat(response.getCaptured()).isEmpty();
+        assertThat(response.getReleased()).singleElement()
+                .extracting(AuctionSettleResponse.ReleasedEntry::getAmount)
+                .isEqualTo(25_000L);
+        assertThat(hold.getStatus()).isEqualTo(HoldStatus.RELEASED);
+    }
+
+    @Test
+    void settleAuction_throwsWhenWinnerCaptureAmountIsNotPositive() {
+        UUID winnerId = UUID.randomUUID();
+        Wallet winnerWallet = walletWithBalance(winnerId, 0L, 50_000L);
+        BalanceHold hold = BalanceHold.builder()
+                .id(UUID.randomUUID()).walletId(winnerWallet.getId())
+                .userId(winnerId).auctionId(auctionId).amount(50_000L)
+                .status(HoldStatus.ACTIVE).createdAt(LocalDateTime.now()).build();
+        when(balanceHoldRepository.findByAuctionIdAndStatus(auctionId, HoldStatus.ACTIVE))
+                .thenReturn(List.of(hold));
+        when(walletRepository.findById(winnerWallet.getId())).thenReturn(Optional.of(winnerWallet));
+
+        assertThatThrownBy(() -> service.settleAuction(auctionId, null,
+                List.of(new AuctionSettleRequest.WinnerEntry(winnerId, 0L))))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Capture amount must be positive");
+    }
+
+    @Test
+    void settleAuction_throwsWhenHoldWalletDoesNotExist() {
+        BalanceHold hold = BalanceHold.builder()
+                .id(UUID.randomUUID()).walletId(UUID.randomUUID())
+                .userId(UUID.randomUUID()).auctionId(auctionId).amount(50_000L)
+                .status(HoldStatus.ACTIVE).createdAt(LocalDateTime.now()).build();
+        when(balanceHoldRepository.findByAuctionIdAndStatus(auctionId, HoldStatus.ACTIVE))
+                .thenReturn(List.of(hold));
+        when(walletRepository.findById(hold.getWalletId())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.settleAuction(auctionId, null, List.of()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Wallet not found for hold");
+    }
+
+    @Test
+    void settleAuction_paysNewSellerWalletWhenSellerIsProvided() {
+        UUID winnerId = UUID.randomUUID();
+        UUID sellerId = UUID.randomUUID();
+        Wallet winnerWallet = walletWithBalance(winnerId, 0L, 50_000L);
+        BalanceHold hold = BalanceHold.builder()
+                .id(UUID.randomUUID()).walletId(winnerWallet.getId())
+                .userId(winnerId).auctionId(auctionId).amount(50_000L)
+                .status(HoldStatus.ACTIVE).createdAt(LocalDateTime.now()).build();
+
+        when(balanceHoldRepository.findByAuctionIdAndStatus(auctionId, HoldStatus.ACTIVE))
+                .thenReturn(List.of(hold));
+        when(walletRepository.findById(winnerWallet.getId())).thenReturn(Optional.of(winnerWallet));
+        when(walletRepository.findByUserId(sellerId)).thenReturn(Optional.empty());
+        when(balanceHoldRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        AuctionSettleResponse response = service.settleAuction(auctionId, sellerId,
+                List.of(new AuctionSettleRequest.WinnerEntry(winnerId, 50_000L)));
+
+        assertThat(response.getCaptured()).hasSize(1);
+        verify(walletRepository).findByUserId(sellerId);
+        verify(walletTransactionRepository, atLeastOnce()).save(argThat(txn ->
+                txn.getType() == TransactionType.PAYMENT_RECEIVED && txn.getAmount() == 50_000L));
+    }
+
     // ── releaseAllHoldsForAuction ─────────────────────────────────────────────
 
     @Test
@@ -405,6 +759,18 @@ class WalletServiceImplTest {
         assertThat(wallet.getHeldBalance()).isZero();
     }
 
+    @Test
+    void releaseAllHolds_throwsWhenWalletDoesNotExist() {
+        BalanceHold hold = activeHold(UUID.randomUUID(), 30_000L);
+        when(balanceHoldRepository.findByAuctionIdAndStatus(auctionId, HoldStatus.ACTIVE))
+                .thenReturn(List.of(hold));
+        when(walletRepository.findById(wallet.getId())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.releaseAllHoldsForAuction(auctionId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Wallet not found for hold");
+    }
+
     // ── freeze ───────────────────────────────────────────────────────────────
 
     @Test
@@ -415,6 +781,35 @@ class WalletServiceImplTest {
         assertThat(wallet.isFrozen()).isTrue();
         verify(walletTransactionRepository).save(argThat(txn ->
                 txn.getType() == TransactionType.WALLET_FROZEN && txn.getAmount() == 0L));
+    }
+
+    @Test
+    void freezeWallet_withNullReasonWritesGenericAuditRecord() {
+        service.freezeWallet(userId, null);
+
+        verify(walletTransactionRepository).save(argThat(txn ->
+                txn.getType() == TransactionType.WALLET_FROZEN
+                        && txn.getDescription().equals("Wallet frozen")));
+    }
+
+    @Test
+    void freezeWallet_withBlankReasonWritesGenericAuditRecord() {
+        service.freezeWallet(userId, "   ");
+
+        verify(walletTransactionRepository).save(argThat(txn ->
+                txn.getType() == TransactionType.WALLET_FROZEN
+                        && txn.getDescription().equals("Wallet frozen")));
+    }
+
+    @Test
+    void freezeWallet_doesNotWriteAuditRecordWhenAlreadyFrozen() {
+        wallet.setFrozen(true);
+
+        WalletResponse response = service.freezeWallet(userId, "ignored");
+
+        assertThat(response.isFrozen()).isTrue();
+        verify(walletRepository, never()).save(any());
+        verify(walletTransactionRepository, never()).save(any());
     }
 
     // ── admin methods ─────────────────────────────────────────────────────────
@@ -476,5 +871,25 @@ class WalletServiceImplTest {
                 .id(UUID.randomUUID()).userId(ownerId)
                 .availableBalance(available).heldBalance(held)
                 .createdAt(LocalDateTime.now()).build();
+    }
+
+    private UUID legacyUserId(UUID ownerId) {
+        return UUID.nameUUIDFromBytes(("wallet-user-" + ownerId).getBytes(StandardCharsets.UTF_8));
+    }
+
+    private Wallet mergeLegacyWalletWithFrozenState(boolean targetFrozen, boolean legacyFrozen) {
+        UUID ownerId = UUID.randomUUID();
+        UUID legacyUserId = legacyUserId(ownerId);
+        Wallet target = walletWithBalance(ownerId, 10_000L, 0L);
+        target.setFrozen(targetFrozen);
+        Wallet legacy = walletWithBalance(legacyUserId, 5_000L, 0L);
+        legacy.setFrozen(legacyFrozen);
+
+        when(walletRepository.findByUserIdForUpdate(ownerId)).thenReturn(Optional.of(target));
+        when(walletRepository.findByUserIdForUpdate(legacyUserId)).thenReturn(Optional.of(legacy));
+        when(balanceHoldRepository.findAllByWalletId(legacy.getId())).thenReturn(List.of());
+        when(walletTransactionRepository.findAllByWalletId(legacy.getId())).thenReturn(List.of());
+
+        return service.findOrCreateWallet(ownerId);
     }
 }

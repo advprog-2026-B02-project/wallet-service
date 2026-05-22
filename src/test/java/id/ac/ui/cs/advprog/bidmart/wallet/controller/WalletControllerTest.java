@@ -53,6 +53,20 @@ class WalletControllerTest {
     }
 
     @Test
+    void getWallet_usesUuidPrincipalDirectly() {
+        UUID expectedUserId = UUID.randomUUID();
+        Principal principal = principal(expectedUserId.toString());
+        WalletResponse response = WalletResponse.builder().userId(expectedUserId).availableBalance(50_000L).build();
+        when(walletService.getWallet(expectedUserId)).thenReturn(response);
+
+        ResponseEntity<WalletResponse> result = controller.getWallet(principal);
+
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isSameAs(response);
+        verify(walletService).getWallet(expectedUserId);
+    }
+
+    @Test
     void topUp_usesResolvedUserId() {
         Principal principal = principal("bob");
         UUID expectedUserId = resolvedUserId("bob");

@@ -42,6 +42,17 @@ class WalletControllerIntegrationTest {
                 .andExpect(jsonPath("$.status").value("UP"));
     }
 
+    @Test
+    void prometheus_returnsWalletMetrics() throws Exception {
+        UUID userId = UUID.randomUUID();
+        walletService.topUp(userId, TopUpRequest.builder().amount(100_000L).build());
+
+        mockMvc.perform(get("/actuator/prometheus"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("wallet_wallets")))
+                .andExpect(content().string(containsString("wallet_operation_total")));
+    }
+
     // ── internal: createHold ──────────────────────────────────────────────────
 
     @Test

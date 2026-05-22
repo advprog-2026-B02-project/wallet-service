@@ -2,6 +2,7 @@ plugins {
     java
     id("org.springframework.boot") version "3.4.2"
     id("io.spring.dependency-management") version "1.1.7"
+    id("org.sonarqube") version "7.3.0.8198"
     jacoco
 }
 
@@ -31,7 +32,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
     implementation("org.springframework.kafka:spring-kafka")
+    implementation("io.micrometer:micrometer-registry-prometheus")
 
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
@@ -62,5 +65,14 @@ tasks.jacocoTestReport {
         xml.required.set(true)
         csv.required.set(false)
         html.outputLocation.set(layout.buildDirectory.dir("reports/jacoco"))
+    }
+}
+
+sonar {
+    properties {
+        property("sonar.organization", "advprog-2026-b02-project")
+        property("sonar.projectKey", "advprog-2026-B02-project_wallet-service")
+        property("sonar.host.url", "https://sonarcloud.io")
+        property("sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/test/jacocoTestReport.xml")
     }
 }

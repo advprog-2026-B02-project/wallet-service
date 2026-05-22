@@ -20,4 +20,6 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
     Optional<Wallet> findByUserIdForUpdate(@Param("userId") UUID userId);
 
     boolean existsByUserId(UUID userId);
+
+    long countByFrozenTrue();
 }
