@@ -3,6 +3,7 @@
 Wallet service menangani saldo user, top up, withdraw, hold saldo saat bidding,
 release/capture hold, settlement auction, dan audit transaksi wallet.
 
+> Screenshot monitoring ada di monitoring/image.png
 
 ## Monitoring
 
