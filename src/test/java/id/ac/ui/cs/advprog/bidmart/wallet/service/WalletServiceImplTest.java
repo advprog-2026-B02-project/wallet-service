@@ -64,6 +64,7 @@ class WalletServiceImplTest {
         WalletResponse res = service.getWallet(userId);
         assertThat(res.getAvailableBalance()).isEqualTo(100_000L);
         assertThat(res.getUserId()).isEqualTo(userId);
+        verify(walletRepository, never()).findByUserIdForUpdate(userId);
     }
 
     @Test
@@ -272,6 +273,18 @@ class WalletServiceImplTest {
                     assertThat(response.getType()).isEqualTo("TOPUP");
                     assertThat(response.getReferenceId()).isEqualTo(auctionId);
                 });
+    }
+
+    @Test
+    void getTransactionHistory_returnsEmptyPageWhenWalletDoesNotExist() {
+        UUID newUser = UUID.randomUUID();
+        when(walletRepository.findByUserId(newUser)).thenReturn(Optional.empty());
+
+        Page<TransactionResponse> page = service.getTransactionHistory(newUser, Pageable.unpaged());
+
+        assertThat(page).isEmpty();
+        verify(walletTransactionRepository, never()).findByWalletIdOrderByCreatedAtDesc(any(), any());
+        verify(walletRepository, never()).findByUserIdForUpdate(newUser);
     }
 
     @Test

@@ -7,7 +7,17 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "balance_holds")
+@Table(
+        name = "balance_holds",
+        indexes = {
+                @Index(name = "idx_balance_hold_wallet",
+                        columnList = "wallet_id"),
+                @Index(name = "idx_balance_hold_auction_status",
+                        columnList = "auction_id, status"),
+                @Index(name = "idx_balance_hold_user_auction_status",
+                        columnList = "user_id, auction_id, status")
+        }
+)
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
 public class BalanceHold {
 
@@ -15,13 +25,16 @@ public class BalanceHold {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
+    @Column(name = "wallet_id", nullable = false)
     private UUID walletId;
 
-    @Column(nullable = false)
+    @Column(name = "user_id", nullable = false)
     private UUID userId;
 
+    @Column(name = "auction_id")
     private UUID auctionId;
+
+    @Column(name = "bid_id")
     private UUID bidId;
 
     @Column(nullable = false)
@@ -31,8 +44,9 @@ public class BalanceHold {
     @Enumerated(EnumType.STRING)
     private HoldStatus status;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }

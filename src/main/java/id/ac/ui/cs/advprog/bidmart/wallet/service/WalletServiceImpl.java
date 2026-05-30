@@ -3,10 +3,10 @@ package id.ac.ui.cs.advprog.bidmart.wallet.service;
 import id.ac.ui.cs.advprog.bidmart.wallet.dto.*;
 import id.ac.ui.cs.advprog.bidmart.wallet.model.*;
 import id.ac.ui.cs.advprog.bidmart.wallet.repository.*;
-import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -34,7 +34,9 @@ public class WalletServiceImpl implements WalletService {
     @Override
     @Transactional
     public WalletResponse getWallet(UUID userId) {
-        return toWalletResponse(findOrCreateWallet(userId));
+        return walletRepository.findByUserId(userId)
+                .map(this::toWalletResponse)
+                .orElseGet(() -> toWalletResponse(findOrCreateWallet(userId)));
     }
 
     @Override
@@ -79,12 +81,13 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public Page<TransactionResponse> getTransactionHistory(UUID userId, Pageable pageable) {
-        Wallet wallet = findOrCreateWallet(userId);
-        return walletTransactionRepository
-                .findByWalletIdOrderByCreatedAtDesc(wallet.getId(), pageable)
-                .map(this::toTransactionResponse);
+        return walletRepository.findByUserId(userId)
+                .map(wallet -> walletTransactionRepository
+                        .findByWalletIdOrderByCreatedAtDesc(wallet.getId(), pageable)
+                        .map(this::toTransactionResponse))
+                .orElseGet(() -> Page.empty(pageable));
     }
 
     @Override
@@ -326,6 +329,7 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public WalletResponse getWalletByUserIdForAdmin(UUID userId) {
         Wallet wallet = walletRepository.findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
@@ -333,6 +337,7 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<TransactionResponse> getTransactionHistoryForAdmin(UUID userId, Pageable pageable) {
         Wallet wallet = walletRepository.findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
